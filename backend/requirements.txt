@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+send2trash
+duplicate_images
+pillow
