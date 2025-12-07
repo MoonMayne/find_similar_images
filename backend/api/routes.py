@@ -113,8 +113,10 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
     job.status = "running"
     JOB_STORE.update(job)
     STORE.save_job(job)
-    try:
-        groups = scan_and_group(
+
+    # Helper function to perform the actual scan_and_group logic
+    def perform_scan_attempt():
+        return scan_and_group(
             directories=[p for p in payload.directories],
             hash_size=payload.hash_size,
             workers=payload.workers,
@@ -122,26 +124,66 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
             hash_db=payload.hash_db,
             exclude_regexes=payload.exclude_regexes,
         )
-        group_results: List[GroupResult] = []
-        primary_dir = payload.primary_dir
-        for idx, group in enumerate(groups):
-            stats = {str(path): image_stats(path) for path in group}
-            suggested = suggest_keeper(list(group), primary_dir)
-            group_results.append(
-                GroupResult(
-                    id=idx + 1,
-                    files=[str(p) for p in group],
-                    suggested=str(suggested),
-                    stats=stats,
+
+    groups = None # Initialize groups to None
+    try:
+        try:
+            groups = perform_scan_attempt()
+        except ValueError as err:
+            # Check for Metadata mismatch error from duplicate_images library
+            if "Metadata mismatch" in str(err) and payload.hash_db and payload.hash_db.exists():
+                logging.warning(f"Metadata mismatch detected in hash_db: {payload.hash_db}. Attempting to clear and retry.")
+                try:
+                    payload.hash_db.unlink()  # Delete the conflicting hash_db file
+                    logging.info(f"Cleared hash_db: {payload.hash_db}. Retrying scan.")
+                    groups = perform_scan_attempt() # Retry scan
+                except Exception as retry_err:
+                    logging.exception(f"Scan failed after clearing hash_db and retrying: {retry_err}")
+                    job.status = "failed"
+                    job.message = f"Scan failed after hash_db reset: {retry_err}"
+                    groups = None # Ensure groups is None if retry fails
+            else:
+                # Not a metadata mismatch ValueError, treat as regular failure
+                logging.exception("Scan failed with unexpected ValueError")
+                job.status = "failed"
+                job.message = str(err)
+                groups = None
+        except Exception as err:  # Catch any other general exceptions during scan attempt
+            logging.exception("Scan failed")
+            job.status = "failed"
+            job.message = str(err)
+            groups = None
+        
+        # Only proceed to process groups if a valid 'groups' list was obtained and job status is not already failed
+        if groups is not None and job.status != "failed":
+            group_results: List[GroupResult] = []
+            primary_dir = payload.primary_dir
+            for idx, group in enumerate(groups):
+                stats = {str(path): image_stats(path) for path in group}
+                suggested = suggest_keeper(list(group), primary_dir)
+                group_results.append(
+                    GroupResult(
+                        id=idx + 1,
+                        files=[str(p) for p in group],
+                        suggested=str(suggested),
+                        stats=stats,
+                    )
                 )
-            )
-        job.groups = group_results
-        job.status = "succeeded"
-        STORE.save_groups(job.id, group_results)
-    except Exception as err:  # noqa: BLE001
-        logging.exception("Scan failed")
+            job.groups = group_results
+            job.status = "succeeded"
+            STORE.save_groups(job.id, group_results)
+        elif groups is None and job.status != "failed":
+            # This path is hit if perform_scan_attempt() resulted in groups being None
+            # but job.status wasn't explicitly set to "failed" yet.
+            # This can happen if perform_scan_attempt() itself returns None without raising.
+            # Which it should not do usually, but as a safeguard.
+            job.status = "failed"
+            job.message = job.message or "Scan did not produce groups unexpectedly."
+
+    except Exception as err: # Catch any exceptions during group processing itself (after scan attempt)
+        logging.exception("Failed to process scan results into groups after successful scan attempt")
         job.status = "failed"
-        job.message = str(err)
+        job.message = f"Failed to process results: {err}"
     finally:
         job.finished_at = time.time()
         JOB_STORE.update(job)

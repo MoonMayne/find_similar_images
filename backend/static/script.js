@@ -12,6 +12,18 @@ async function loadLatestJob() {
     return { job_id: null, status: 'none' };
 }
 
+function openImagePreview(imagePath) {
+    // For now, assuming currentJobId, imagePreviewSrc, and imagePreviewModal are accessible globally
+    imagePreviewSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(imagePath)}&max_size=2048`; // Use a larger max_size for preview
+    imagePreviewModal.style.display = 'flex';
+}
+
+function closeImagePreview() {
+    // For now, assuming imagePreviewModal and imagePreviewSrc are accessible globally
+    imagePreviewModal.style.display = 'none';
+    imagePreviewSrc.src = ''; // Clear image source
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements (Scan Setup Screen) ---
@@ -27,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scanStatusEl = document.getElementById('scanStatus');
     const scanProgress = document.getElementById('scanProgress');
     const scanProgressFill = document.getElementById('scanProgressFill');
+    const scanProgressText = document.getElementById('scanProgressText'); // New DOM element
     const workersInput = document.getElementById('workers');
     const trashDirInput = document.getElementById('trashDir');
 
@@ -34,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const screenScanSetup = document.getElementById('screen-scan-setup');
     const screenReview = document.getElementById('screen-review');
     const groupListEl = document.getElementById('groupList');
+    const groupFilter = document.getElementById('groupFilter'); // New DOM element
+    const groupSort = document.getElementById('groupSort');     // New DOM element
+    const groupSortDirection = document.getElementById('groupSortDirection'); // New DOM element
+    const btnBackToScanSetup = document.getElementById('btnBackToScanSetup'); // New DOM element
     const heroImg = document.getElementById('heroImg');
     const heroImageText = document.getElementById('heroImageText');
     const heroImageBadge = document.getElementById('heroImageBadge');
@@ -46,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const actTrashNonSuggested = document.getElementById('actTrashNonSuggested');
 
     const pendingText = document.getElementById('pendingText');
+    const btnPrevGroup = document.getElementById('btnPrevGroup'); // New DOM element
+    const btnNextGroup = document.getElementById('btnNextGroup'); // New DOM element
     const btnFinalize = document.getElementById('btnFinalize');
     const finalizeModal = document.getElementById('finalizeModal');
     const finalizeMessage = document.getElementById('finalizeMessage');
@@ -56,20 +75,116 @@ document.addEventListener('DOMContentLoaded', () => {
     const optKeepPrimary = document.getElementById('optKeepPrimary');
     const optApplyTrash = document.getElementById('optApplyTrash');
 
+    // Image Preview Modal Elements
+    const imagePreviewModal = document.getElementById('imagePreviewModal');
+    const imagePreviewSrc = document.getElementById('imagePreviewSrc');
+    const imagePreviewClose = document.getElementById('imagePreviewClose');
+
+    // Event listeners for closing the image preview modal
+    imagePreviewClose.addEventListener('click', closeImagePreview);
+    imagePreviewModal.addEventListener('click', (e) => {
+        if (e.target === imagePreviewModal) { // Only close if clicked on the overlay, not the image itself
+            closeImagePreview();
+        }
+    });
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && imagePreviewModal.style.display === 'flex') {
+            closeImagePreview();
+        }
+    });
+
     // --- State ---
     let directories = [];
     let selectedDir = null;
     let currentJobId = null;
 
     // --- Review Screen State ---
-    let currentGroups = [];
+    let allGroups = []; // Store the original fetched groups
+    let currentGroups = []; // Store the filtered/sorted groups for rendering
     let selectedGroup = null;
     let selectedImage = null;
     let decisions = new Map(); // { groupId: Set<string> of paths to keep }
     let visitedGroups = new Set(); // To track reviewed groups
     let isSideBySideView = false; // New state for side-by-side view
+    let currentFilter = 'all'; // New state for filtering groups
+    let currentSortBy = 'id'; // New state for sorting groups ('id', 'image_count', 'decision_status')
+    let currentSortDirection = 'asc'; // New state for sort direction ('asc', 'desc')
 
     // --- Functions ---
+
+    function getGroupDecisionStatus(group) {
+        const keptPaths = decisions.get(group.id) || new Set();
+        const keptCount = keptPaths.size;
+        const totalCount = group.files.length;
+
+        if (totalCount === 0) return 'empty';
+        if (keptCount === 0) return 'deleted';
+        if (keptCount === totalCount) return 'kept';
+        return 'mixed';
+    }
+
+    function filterAndSortGroups() {
+        let filteredGroups = [...allGroups]; // Start with all groups
+
+        // Apply filtering
+        if (currentFilter !== 'all') {
+            filteredGroups = filteredGroups.filter(group => {
+                const isReviewed = visitedGroups.has(group.id);
+                const decisionStatus = getGroupDecisionStatus(group);
+
+                switch (currentFilter) {
+                    case 'reviewed': return isReviewed;
+                    case 'unreviewed': return !isReviewed;
+                    case 'kept': return decisionStatus === 'kept';
+                    case 'deleted': return decisionStatus === 'deleted';
+                    case 'mixed': return decisionStatus === 'mixed';
+                    default: return true;
+                }
+            });
+        }
+
+        // Apply sorting
+        filteredGroups.sort((a, b) => {
+            let valA, valB;
+
+            switch (currentSortBy) {
+                case 'id':
+                    valA = a.id;
+                    valB = b.id;
+                    break;
+                case 'image_count':
+                    valA = a.files.length;
+                    valB = b.files.length;
+                    break;
+                case 'decision_status':
+                    valA = getGroupDecisionStatus(a);
+                    valB = getGroupDecisionStatus(b);
+                    // Custom sort order for decision status
+                    const statusOrder = { 'unreviewed': 0, 'mixed': 1, 'kept': 2, 'deleted': 3, 'empty': 4 };
+                    return (statusOrder[valA] - statusOrder[valB]) * (currentSortDirection === 'asc' ? 1 : -1);
+                default:
+                    valA = a.id;
+                    valB = b.id;
+            }
+
+            if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        currentGroups = filteredGroups; // Update the currentGroups to the filtered and sorted list
+        renderGroupList(); // Re-render the list
+        // If the selected group is no longer in currentGroups, select the first one or null
+        if (selectedGroup && !currentGroups.some(g => g.id === selectedGroup.id)) {
+            selectedGroup = currentGroups.length > 0 ? currentGroups[0] : null;
+            selectedImage = selectedGroup ? (Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0]) : null;
+        } else if (!selectedGroup && currentGroups.length > 0) {
+             selectedGroup = currentGroups[0];
+             selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
+        }
+        renderSelectedGroup(); // Re-render selected group to ensure it's correct
+        updateGroupNavigationButtons(); // Update buttons based on new currentGroups
+    }
 
     function renderDirs() {
         dirList.innerHTML = '';
@@ -138,9 +253,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         btnStartScan.disabled = true;
-        scanStatusEl.textContent = 'Starting scan...';
+        btnGoReview.disabled = true; // Disable review button until scan is ready
+        scanStatusEl.textContent = 'Starting scan... Please wait.';
         scanProgress.style.display = 'block';
-        scanProgressFill.style.width = '5%';
+        scanProgressFill.style.width = '0%'; // Reset to 0
+        scanProgressText.textContent = '0%';
+        scanProgressFill.classList.add('transition-all', 'duration-500', 'ease-out'); // Add transition for smoother animation
 
         try {
             const response = await fetch('/api/scan', {
@@ -173,32 +291,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
 
-            scanStatusEl.textContent = `Status: ${data.status} | Groups Found: ${data.groups}`;
-            
-            // Simple progress simulation
-            let progress = 20;
-            if (data.status === 'running') {
-                 progress += 30;
+            // Calculate a more meaningful progress if possible, otherwise use simulation
+            let progress = data.progress_percent !== undefined ? data.progress_percent : 0;
+            if (data.status === 'pending') {
+                progress = 5;
+            } else if (data.status === 'running' && data.progress_percent === undefined) {
+                // Fallback for simple progress simulation if backend doesn't send progress_percent
+                progress = 20 + Math.min(data.groups / 100 * 50, 75); // rough estimate
             } else if (data.status === 'succeeded' || data.status === 'failed') {
                 progress = 100;
             }
+            
             scanProgressFill.style.width = `${progress}%`;
+            scanProgressText.textContent = `${Math.round(progress)}%`;
+            
+            let statusMessage = `Status: ${data.status}`;
+            if (data.status === 'running') {
+                statusMessage += ` | Images Hashed: ${data.hashed_images || 0}/${data.total_images || '?'}`;
+            }
+            if (data.groups !== undefined) {
+                statusMessage += ` | Groups Found: ${data.groups}`;
+            }
+            scanStatusEl.textContent = statusMessage;
 
 
             if (data.status === 'running' || data.status === 'pending') {
                 setTimeout(() => pollStatus(jobId), 2000); // Poll every 2 seconds
             } else if (data.status === 'succeeded') {
-                scanStatusEl.textContent = `Scan complete! Found ${data.groups} groups.`;
+                scanStatusEl.textContent = `Scan complete! Found ${data.groups} groups. Ready for review.`;
                 btnGoReview.disabled = false;
                 btnStartScan.disabled = false;
+                scanProgressFill.classList.remove('transition-all'); // Remove transition after completion
             } else { // failed
                 scanStatusEl.textContent = `Scan failed: ${data.message}`;
                 btnStartScan.disabled = false;
+                scanProgressFill.classList.remove('transition-all'); // Remove transition on error
             }
         } catch (error) {
             scanStatusEl.textContent = `Error polling: ${error.message}`;
             btnStartScan.disabled = false;
+            scanProgressFill.classList.remove('transition-all'); // Remove transition on error
         }
+    }
+
+    function showScanSetupScreen() {
+        screenReview.style.display = 'none';
+        screenScanSetup.style.display = 'block';
+        // Optionally clear any review state if necessary, but typically a fresh scan setup is desired.
     }
 
     function showReviewScreen() {
@@ -212,11 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch(`/api/groups?job_id=${currentJobId}`);
         if(response.ok) {
             const data = await response.json();
-            currentGroups = data.groups;
+            allGroups = data.groups; // Store all fetched groups
             decisions = new Map(); // Reset decisions
             visitedGroups = new Set(); // Reset visited groups
 
-            currentGroups.forEach(group => {
+            allGroups.forEach(group => { // Iterate over allGroups to initialize decisions
                 const keptSet = new Set();
                 if (group.suggested) {
                     keptSet.add(group.suggested); // Keep suggested by default
@@ -226,16 +365,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 decisions.set(group.id, keptSet);
             });
 
-            if (currentGroups.length > 0) {
+            // After loading and initializing decisions, apply filter and sort
+            filterAndSortGroups(); // This will populate currentGroups and call renderGroupList()
+
+            if (currentGroups.length > 0) { // Select first group from filtered/sorted list
                 selectedGroup = currentGroups[0];
                 selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
             } else {
                 selectedGroup = null;
                 selectedImage = null;
             }
-            renderGroupList();
+            // renderGroupList() is called by filterAndSortGroups()
             renderSelectedGroup();
             updatePendingActions();
+            updateGroupNavigationButtons(); // Call here
         } else {
             alert('Could not load groups.');
         }
@@ -243,18 +386,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderGroupList() {
         groupListEl.innerHTML = '';
-        currentGroups.forEach(async group => {
+        currentGroups.forEach(group => { // Iterate over currentGroups (filtered/sorted)
             const div = document.createElement('div');
             const keptPaths = decisions.get(group.id) || new Set();
             const keptCount = keptPaths.size;
             const deletedCount = group.files.length - keptCount;
             
             let statusText = `Kept: ${keptCount}, Deleted: ${deletedCount}`;
-            if (keptCount === 0 && group.files.length > 0) {
+            const decisionStatus = getGroupDecisionStatus(group); // Use helper for status
+            if (decisionStatus === 'deleted') {
                 statusText = `<span class="text-red-400">All Deleted</span>`;
-            } else if (keptCount === group.files.length) {
+            } else if (decisionStatus === 'kept') {
                 statusText = `<span class="text-green-400">All Kept</span>`;
-            } else if (keptCount > 0 && deletedCount > 0) {
+            } else if (decisionStatus === 'mixed') {
                 statusText = `<span class="text-yellow-400">Mixed</span>`;
             }
 
@@ -289,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             groupListEl.appendChild(div);
         });
+        updateGroupNavigationButtons(); // Call here
     }
 
     function renderSelectedGroup() {
@@ -422,9 +567,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file === selectedImage) {
                 img.classList.add('!border-indigo-500', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-indigo-400'); // Override
             }
-            img.onclick = () => {
-                selectedImage = file;
-                renderSelectedGroup();
+            img.onclick = (event) => {
+                event.stopPropagation(); // Prevent event from bubbling up to thumbContainer
+                openImagePreview(file);
             };
             
             thumbContainer.appendChild(img);
@@ -435,8 +580,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 thumbContainer.appendChild(tag);
             }
 
+            // Add an additional click handler to thumbContainer for selection, distinct from preview
+            thumbContainer.addEventListener('click', () => {
+                selectedImage = file;
+                renderSelectedGroup();
+            });
+
             thumbRow.appendChild(thumbContainer);
         });
+        updateGroupNavigationButtons(); // Call here
     }
 
     function toggleKeepSelected() {
@@ -496,19 +648,56 @@ document.addEventListener('DOMContentLoaded', () => {
         advanceToNextGroup();
     }
 
-    function advanceToNextGroup() {
-        const currentIndex = currentGroups.findIndex(g => g.id === selectedGroup.id);
-        if (currentIndex + 1 < currentGroups.length) {
-            selectedGroup = currentGroups[currentIndex + 1];
-            // Select the first kept image in the new group, or the first file if none kept
-            const newKeptPaths = decisions.get(selectedGroup.id) || new Set();
-            selectedImage = Array.from(newKeptPaths)[0] || selectedGroup.files[0];
-            renderGroupList();
-            renderSelectedGroup();
-        } else {
-            // Optionally, give feedback that all groups are reviewed
-            alert("All groups reviewed!");
+    function advanceToPreviousGroup() {
+        if (!selectedGroup || currentGroups.length === 0) return;
+        let currentIndex = currentGroups.findIndex(g => g.id === selectedGroup.id);
+
+        if (currentIndex <= 0) { // Already at the first group or selectedGroup not found, go to first if not already
+             if (currentGroups.length > 0 && selectedGroup.id !== currentGroups[0].id) {
+                selectedGroup = currentGroups[0];
+                selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
+                renderGroupList();
+                renderSelectedGroup();
+             }
+            return;
         }
+
+        selectedGroup = currentGroups[currentIndex - 1];
+        const newKeptPaths = decisions.get(selectedGroup.id) || new Set();
+        selectedImage = Array.from(newKeptPaths)[0] || selectedGroup.files[0];
+        renderGroupList();
+        renderSelectedGroup();
+        updateGroupNavigationButtons();
+    }
+
+    function advanceToNextGroup() {
+        if (!selectedGroup || currentGroups.length === 0) return;
+        let currentIndex = currentGroups.findIndex(g => g.id === selectedGroup.id);
+
+        if (currentIndex === -1 || currentIndex >= currentGroups.length - 1) { // SelectedGroup not found OR already at last group
+            if (currentIndex === currentGroups.length - 1) { // Exactly at last group
+                alert("All groups reviewed!");
+            } else if (currentGroups.length > 0 && selectedGroup.id !== currentGroups[0].id) { // Not found or no group selected, jump to first
+                selectedGroup = currentGroups[0];
+                selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
+                renderGroupList();
+                renderSelectedGroup();
+            }
+            return;
+        }
+
+        selectedGroup = currentGroups[currentIndex + 1];
+        const newKeptPaths = decisions.get(selectedGroup.id) || new Set();
+        selectedImage = Array.from(newKeptPaths)[0] || selectedGroup.files[0];
+        renderGroupList();
+        renderSelectedGroup();
+        updateGroupNavigationButtons();
+    }
+
+    function updateGroupNavigationButtons() {
+        const currentIndex = currentGroups.findIndex(g => g.id === selectedGroup?.id);
+        btnPrevGroup.disabled = currentIndex <= 0;
+        btnNextGroup.disabled = currentIndex === -1 || currentIndex >= currentGroups.length - 1;
     }
     
     function updatePendingActions() {
@@ -634,11 +823,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    btnBackToScanSetup.addEventListener('click', showScanSetupScreen);
+
     sideBySideToggle.addEventListener('change', (e) => {
         isSideBySideView = e.target.checked;
         renderSelectedGroup(); // Re-render the group to apply the new view mode
     });
 
+    btnPrevGroup.addEventListener('click', advanceToPreviousGroup);
+    btnNextGroup.addEventListener('click', advanceToNextGroup);
+
+    groupFilter.addEventListener('change', (e) => {
+        currentFilter = e.target.value;
+        filterAndSortGroups();
+    });
+
+    groupSort.addEventListener('change', (e) => {
+        currentSortBy = e.target.value;
+        filterAndSortGroups();
+    });
+
+    groupSortDirection.addEventListener('click', () => {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+        // Update the arrow icon visually
+        const iconPath = groupSortDirection.querySelector('path');
+        if (iconPath) {
+            iconPath.setAttribute('d', currentSortDirection === 'asc' ? 'M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12' : 'M3 20h13M3 16h9m-9-4h6m4 0l4 4m0 0l4-4m-4 4V4');
+        }
+        filterAndSortGroups();
+    });
 
 
     // Review screen actions
@@ -670,21 +883,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         switch (e.key) {
             case 'ArrowUp':
-                if (currentIndex > 0) {
-                    selectedGroup = currentGroups[currentIndex - 1];
-                    selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
-                    renderGroupList();
-                    renderSelectedGroup();
-                }
+                advanceToPreviousGroup();
                 handled = true;
                 break;
             case 'ArrowDown':
-                if (currentIndex < currentGroups.length - 1) {
-                    selectedGroup = currentGroups[currentIndex + 1];
-                    selectedImage = Array.from(decisions.get(selectedGroup.id) || [])[0] || selectedGroup.files[0];
-                    renderGroupList();
-                    renderSelectedGroup();
-                }
+                advanceToNextGroup();
                 handled = true;
                 break;
             case 'ArrowLeft':
