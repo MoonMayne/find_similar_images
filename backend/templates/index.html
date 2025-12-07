@@ -103,7 +103,14 @@
 
         <!-- Review Screen (hidden by default) -->
         <section id="screen-review" style="display: none;" class="bg-gray-900 p-6 rounded-lg shadow-lg">
-            <h2 class="text-2xl font-semibold mb-6 text-white">Review Duplicates</h2>
+            <h2 class="text-2xl font-semibold mb-6 text-white flex items-center justify-between">
+                <span>Review Duplicates</span>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" value="" id="sideBySideToggle" class="sr-only peer">
+                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                    <span class="ms-3 text-sm font-medium text-white">Side-by-Side</span>
+                </label>
+            </h2>
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <!-- Left Column: Group List -->
                 <div class="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-md p-3 max-h-[70vh] overflow-y-auto" id="groupList">
@@ -114,9 +121,7 @@
                 <div class="lg:col-span-3">
                     <div class="bg-gray-800 rounded-lg shadow-inner p-4">
                         <div class="relative mb-4" id="heroImageContainer">
-                            <img id="heroImg" src="" alt="Selected image" class="w-full h-auto max-h-[60vh] object-contain rounded-md bg-gray-900">
-                            <div id="heroImageBadge" class="absolute top-2 left-2 bg-indigo-600 text-white text-xs px-2 py-1 rounded-full" style="display: none;"></div>
-                            <div id="heroImageText" class="text-center text-gray-400"></div>
+                            <!-- Image(s) and associated text/badges will be dynamically injected here by JavaScript -->
                         </div>
                         <div id="thumbRow" class="flex items-center space-x-3 overflow-x-auto pb-2">
                             <!-- Thumbnails will be injected here -->

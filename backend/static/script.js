@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroImageText = document.getElementById('heroImageText');
     const heroImageBadge = document.getElementById('heroImageBadge');
     const thumbRow = document.getElementById('thumbRow');
+    const sideBySideToggle = document.getElementById('sideBySideToggle'); // New DOM element constant
 
     const actToggleKeep = document.getElementById('actToggleKeep');
     const actKeepAll = document.getElementById('actKeepAll');
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedImage = null;
     let decisions = new Map(); // { groupId: Set<string> of paths to keep }
     let visitedGroups = new Set(); // To track reviewed groups
+    let isSideBySideView = false; // New state for side-by-side view
 
     // --- Functions ---
 
@@ -263,7 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="flex items-center space-x-2">
                     ${thumbnailUrl ? `<img src="${thumbnailUrl}" class="w-8 h-8 object-cover rounded" alt="Thumbnail">` : ''}
                     <div class="flex-grow">
-                        <div>Group ${group.id} (${group.files.length} images)</div>
+                        <div class="flex items-center space-x-2">
+                            <span>Group ${group.id} (${group.files.length} images)</span>
+                            ${visitedGroups.has(group.id) ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>` : ''}
+                        </div>
                         <div class="text-sm text-gray-400">${statusText}</div>
                     </div>
                 </div>
@@ -285,11 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderSelectedGroup() {
+        const heroImageContainer = document.getElementById('heroImageContainer'); // Get container reference
+        heroImageContainer.innerHTML = ''; // Clear existing content
+
         if (!selectedGroup) {
-            heroImg.src = '';
-            heroImageText.innerHTML = 'No group selected.';
-            heroImageBadge.style.display = 'none';
-            thumbRow.innerHTML = '';
+            heroImageContainer.innerHTML = '<div class="text-center text-gray-400">No group selected.</div>';
             return;
         }
 
@@ -297,29 +304,89 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSelectedImageKept = keptPaths.has(selectedImage);
         const isSuggested = selectedImage === selectedGroup.suggested;
 
-        heroImg.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
-        
-        let heroText = selectedImage;
-        const imageStats = selectedGroup.stats[selectedImage];
-        if (imageStats) {
-            heroText += ` | ${imageStats.width}x${imageStats.height} | ${imageStats.size}`;
-        }
-        heroImageText.innerHTML = heroText;
-
-        // Update hero image badge
-        heroImageBadge.style.display = 'block';
+        // Render hero image badge
+        const badge = document.createElement('div');
+        badge.className = 'absolute top-2 left-2 bg-indigo-600 text-white text-xs px-2 py-1 rounded-full';
         if (isSuggested) {
-            heroImageBadge.textContent = 'Suggested';
-            heroImageBadge.className = 'absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full';
+            badge.textContent = 'Suggested';
+            badge.classList.replace('bg-indigo-600', 'bg-blue-600');
         } else if (isSelectedImageKept) {
-            heroImageBadge.textContent = 'Kept';
-            heroImageBadge.className = 'absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full';
+            badge.textContent = 'Kept';
+            badge.classList.replace('bg-indigo-600', 'bg-green-600');
         } else {
-            heroImageBadge.textContent = 'To be Deleted';
-            heroImageBadge.className = 'absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full';
+            badge.textContent = 'To be Deleted';
+            badge.classList.replace('bg-indigo-600', 'bg-red-600');
         }
+        heroImageContainer.appendChild(badge);
+
+        const heroTextEl = document.createElement('div');
+        heroTextEl.className = 'text-center text-gray-400 mt-2';
+
+        // Determine if side-by-side view is possible
+        const canUseSideBySide = selectedGroup.files.length >= 2 && selectedGroup.files.length <= 3;
+        sideBySideToggle.disabled = !canUseSideBySide;
+        // The toggle's 'checked' state should reflect if side-by-side is both enabled and currently applicable
+        sideBySideToggle.checked = isSideBySideView && canUseSideBySide;
 
 
+        if (isSideBySideView && canUseSideBySide) {
+            const sideBySideDiv = document.createElement('div');
+            sideBySideDiv.className = `flex justify-center items-center space-x-4 h-full max-h-[60vh] 
+                                       ${selectedGroup.files.length === 2 ? 'side-by-side-grid-2' : ''}
+                                       ${selectedGroup.files.length === 3 ? 'side-by-side-grid-3' : ''}`; // Apply grid class
+
+            selectedGroup.files.forEach(file => {
+                const isCurrentFileSelected = (file === selectedImage);
+                const isCurrentFileSuggested = (file === selectedGroup.suggested);
+                
+                const imgContainer = document.createElement('div');
+                // Use custom class for styling and flex properties
+                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-gray-800';
+
+                const img = document.createElement('img');
+                img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=1024`;
+                img.alt = file;
+                img.className = 'w-full h-full object-contain rounded-md bg-gray-900'; // object-contain for vertical fitting
+
+                const imgLabel = document.createElement('div');
+                let labelText = file.split('/').pop(); // Display just the filename
+                if (isCurrentFileSelected) {
+                    labelText = `(Selected) ${labelText}`;
+                    imgLabel.classList.add('text-indigo-400', 'font-bold');
+                }
+                if (isCurrentFileSuggested) {
+                    labelText = `(Suggested) ${labelText}`;
+                    imgLabel.classList.add('text-blue-400', 'font-bold');
+                }
+                imgLabel.textContent = labelText;
+                imgLabel.className += ' text-sm text-gray-400 mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
+
+
+                imgContainer.appendChild(img);
+                imgContainer.appendChild(imgLabel);
+                sideBySideDiv.appendChild(imgContainer);
+            });
+
+            heroImageContainer.appendChild(sideBySideDiv);
+            heroTextEl.style.display = 'none'; // Hide general text in side-by-side
+        } else {
+            // Existing single image view logic
+            const img = document.createElement('img');
+            img.id = 'heroImg';
+            img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
+            img.alt = 'Selected image';
+            img.className = 'w-full h-auto max-h-[60vh] object-contain rounded-md bg-gray-900';
+            heroImageContainer.appendChild(img);
+            
+            let heroText = selectedImage;
+            const imageStats = selectedGroup.stats[selectedImage];
+            if (imageStats) {
+                heroText += ` | ${imageStats.width}x${imageStats.height} | ${imageStats.size}`;
+            }
+            heroTextEl.innerHTML = heroText;
+        }
+        heroImageContainer.appendChild(heroTextEl); // Append text below images
+        
         thumbRow.innerHTML = '';
         selectedGroup.files.forEach(file => {
             const thumbContainer = document.createElement('div');
@@ -565,6 +632,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             alert("Please run a scan first.");
         }
+    });
+
+    sideBySideToggle.addEventListener('change', (e) => {
+        isSideBySideView = e.target.checked;
+        renderSelectedGroup(); // Re-render the group to apply the new view mode
     });
 
 

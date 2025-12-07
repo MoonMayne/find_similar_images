@@ -1,1 +1,40 @@
-/* Custom styles will go here */
+#heroImageContainer {
+    height: 60vh; /* Ensure the container has a fixed height for better vertical image alignment */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.side-by-side-img-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.side-by-side-img-container img {
+    max-height: 100%; /* Constrain image height within its container */
+    width: auto; /* Allow width to adjust naturally */
+}
+
+/* 
+The `side-by-side-grid-2` and `side-by-side-grid-3` classes are not strictly necessary 
+if Tailwind's `w-1/2` and `w-1/3` are applied directly to the image containers in JS.
+However, to ensure explicit control and clarity, we'll define widths here.
+The script will add `side-by-side-grid-2` or `side-by-side-grid-3` to the parent div.
+*/
+
+#heroImageContainer .side-by-side-grid-2 > .side-by-side-img-container {
+    width: 50%;
+}
+
+#heroImageContainer .side-by-side-grid-3 > .side-by-side-img-container {
+    width: 33.33%;
+}
+
+/* Ensure image labels don't cause overflow */
+.side-by-side-img-container .text-sm {
+    word-break: break-all;
+}
