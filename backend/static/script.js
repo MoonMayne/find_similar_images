@@ -80,6 +80,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreviewSrc = document.getElementById('imagePreviewSrc');
     const imagePreviewClose = document.getElementById('imagePreviewClose');
 
+    // Original Image Viewer Modal Elements
+    const originalImageViewerModal = document.getElementById('originalImageViewerModal');
+    const originalImageSrc = document.getElementById('originalImageSrc');
+    const originalImageClose = document.getElementById('originalImageClose');
+    const magnifiedImageIndexDisplay = document.getElementById('magnifiedImageIndexDisplay'); // New DOM element
+
+    // --- Magnify Mode State ---
+    let isMagnifyMode = false;
+    let magnifiedImagePath = null;
+    let magnifiedImageIndex = -1; // Index of the currently magnified image within selectedGroup.files
+
+    // --- Functions for Magnify Mode ---
+    function openMagnifiedImage(imagePath) {
+        if (!selectedGroup) return; // Ensure a group is selected
+
+        magnifiedImagePath = imagePath;
+        magnifiedImageIndex = selectedGroup.files.indexOf(imagePath);
+        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+        originalImageViewerModal.style.display = 'flex';
+        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+        document.body.classList.add('overflow-hidden'); // Prevent background scrolling
+    }
+
+    function closeMagnifiedImage() {
+        magnifiedImagePath = null;
+        magnifiedImageIndex = -1;
+        originalImageViewerModal.style.display = 'none';
+        originalImageSrc.src = '';
+        magnifiedImageIndexDisplay.textContent = '';
+        document.body.classList.remove('overflow-hidden');
+    }
+
     // Event listeners for closing the image preview modal
     imagePreviewClose.addEventListener('click', closeImagePreview);
     imagePreviewModal.addEventListener('click', (e) => {
@@ -87,9 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
             closeImagePreview();
         }
     });
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && imagePreviewModal.style.display === 'flex') {
-            closeImagePreview();
+
+    // Event listeners for closing the original image viewer modal (magnify mode)
+    originalImageClose.addEventListener('click', closeMagnifiedImage);
+    originalImageViewerModal.addEventListener('click', (e) => {
+        if (e.target === originalImageViewerModal) { // Only close if clicked on the overlay
+            closeMagnifiedImage();
         }
     });
 
@@ -874,13 +909,51 @@ document.addEventListener('DOMContentLoaded', () => {
     optApplyTrash.addEventListener('click', () => applyFinalizeActions('none'));
 
 
-    
     window.addEventListener('keydown', (e) => {
         if (screenReview.style.display !== 'block') return;
 
         let handled = false;
-        const currentIndex = currentGroups.findIndex(g => g.id === selectedGroup.id);
         
+        // Handle Escape key for open modals
+        if (e.key === 'Escape') {
+            if (imagePreviewModal.style.display === 'flex') {
+                closeImagePreview();
+                handled = true;
+            } else if (isMagnifyMode) { // Check if magnify mode is active
+                closeMagnifiedImage();
+                handled = true;
+            }
+        }
+        
+        // Handle Magnify Mode interactions
+        if (isMagnifyMode) {
+            switch (e.key) {
+                case 'ArrowLeft':
+                    if (selectedGroup && magnifiedImageIndex > 0) {
+                        magnifiedImageIndex--;
+                        magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
+                        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+                        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                    }
+                    handled = true;
+                    break;
+                case 'ArrowRight':
+                    if (selectedGroup && magnifiedImageIndex < selectedGroup.files.length - 1) {
+                        magnifiedImageIndex++;
+                        magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
+                        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+                        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                    }
+                    handled = true;
+                    break;
+            }
+            if (handled) {
+                e.preventDefault();
+            }
+            return; // Don't process other shortcuts if in magnified mode
+        }
+
+        // General keyboard shortcuts (only apply if not in magnify mode)
         switch (e.key) {
             case 'ArrowUp':
                 advanceToPreviousGroup();
@@ -890,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 advanceToNextGroup();
                 handled = true;
                 break;
-            case 'ArrowLeft':
+            case 'ArrowLeft': // This is for main screen navigation, not magnify
                 if (selectedGroup) {
                     const files = selectedGroup.files;
                     const currentImageIndex = files.indexOf(selectedImage);
@@ -901,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 handled = true;
                 break;
-            case 'ArrowRight':
+            case 'ArrowRight': // This is for main screen navigation, not magnify
                 if (selectedGroup) {
                     const files = selectedGroup.files;
                     const currentImageIndex = files.indexOf(selectedImage);
@@ -909,6 +982,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectedImage = files[currentImageIndex + 1];
                         renderSelectedGroup();
                     }
+                }
+                handled = true;
+                break;
+            case 'z': // Magnify Mode Toggle (keydown)
+                if (!isMagnifyMode && selectedImage) { // Only enter magnify mode if not already in it
+                    isMagnifyMode = true;
+                    openMagnifiedImage(selectedImage);
                 }
                 handled = true;
                 break;
@@ -922,6 +1002,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'o': // Trash Non-Suggested
                 trashNonSuggested();
+                handled = true;
+                break;
+        }
+
+        if (handled) {
+            e.preventDefault();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (screenReview.style.display !== 'block') return;
+
+        let handled = false;
+        switch (e.key) {
+            case 'z': // Exit Magnify Mode (keyup)
+                if (isMagnifyMode) {
+                    isMagnifyMode = false;
+                    closeMagnifiedImage();
+                }
                 handled = true;
                 break;
         }

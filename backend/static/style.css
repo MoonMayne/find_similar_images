@@ -38,3 +38,36 @@ The script will add `side-by-side-grid-2` or `side-by-side-grid-3` to the parent
 .side-by-side-img-container .text-sm {
     word-break: break-all;
 }
+
+/* Styles for the new magnify/original image viewer modal */
+#originalImageViewerModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+#originalImageSrc {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+}
+
+#magnifiedImageIndexDisplay {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    z-index: 1001;
+}
