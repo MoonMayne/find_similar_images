@@ -81,6 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreviewSrc = document.getElementById('imagePreviewSrc');
     const imagePreviewClose = document.getElementById('imagePreviewClose');
 
+    // Shortcuts Modal Elements
+    const shortcutsModal = document.getElementById('shortcutsModal');
+    const btnShortcuts = document.getElementById('btnShortcuts');
+    const btnShortcutsClose = document.getElementById('btnShortcutsClose');
+
     // Original Image Viewer Modal Elements
     const originalImageViewerModal = document.getElementById('originalImageViewerModal');
     const originalImageSrc = document.getElementById('originalImageSrc');
@@ -900,6 +905,20 @@ document.addEventListener('DOMContentLoaded', () => {
         filterAndSortGroups();
     });
 
+    // Shortcuts Modal
+    btnShortcuts.addEventListener('click', () => {
+        shortcutsModal.style.display = 'flex';
+    });
+
+    btnShortcutsClose.addEventListener('click', () => {
+        shortcutsModal.style.display = 'none';
+    });
+
+    shortcutsModal.addEventListener('click', (e) => {
+        if (e.target === shortcutsModal) {
+            shortcutsModal.style.display = 'none';
+        }
+    });
 
     // Review screen actions
     actToggleKeep.addEventListener('click', toggleKeepSelected);
@@ -928,7 +947,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Handle Escape key for open modals
         if (e.key === 'Escape') {
-            if (imagePreviewModal.style.display === 'flex') {
+            if (shortcutsModal.style.display === 'flex') { // Prioritize shortcuts modal
+                shortcutsModal.style.display = 'none';
+                handled = true;
+            } else if (imagePreviewModal.style.display === 'flex') {
                 closeImagePreview();
                 handled = true;
             } else if (isMagnifyMode) { // Check if magnify mode is active
