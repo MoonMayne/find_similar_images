@@ -6,9 +6,11 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, validator
+
 
 from backend.config import DEFAULT_THRESHOLD, DEFAULT_WORKERS, HASH_DB, TRASH_DIR, THUMBNAIL_MAX_SIZE
 from backend.core.hash_engine import scan_and_group
@@ -32,6 +34,7 @@ class ScanRequest(BaseModel):
     algorithm: str = Field("phash", description="duplicate_images algorithm")
     hash_db: Optional[Path] = Field(HASH_DB, description="Path to hash cache (JSON)")
     exclude_regexes: Optional[List[str]] = Field(None, description="Regex to exclude paths")
+    enable_sharpness_check: Optional[bool] = Field(False, description="Enable sharpness check for suggested image")
 
     @validator("directories", each_item=True)
     def _must_exist(cls, value: Path) -> Path:
@@ -109,6 +112,23 @@ class TrashNonPrimaryRequest(BaseModel):
         return value
 
 
+def _process_group_for_suggestion(
+    group: List[Path],
+    group_id: int,
+    primary_dir: Optional[Path],
+    enable_sharpness_check: bool,
+) -> GroupResult:
+    """Helper function to process a single group for suggestions."""
+    stats = {str(path): image_stats(path) for path in group}
+    suggested = suggest_keeper(list(group), primary_dir, enable_sharpness_check)
+    return GroupResult(
+        id=group_id,
+        files=[str(p) for p in group],
+        suggested=str(suggested),
+        stats=stats,
+    )
+
+
 def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
     job.status = "running"
     JOB_STORE.update(job)
@@ -158,17 +178,24 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
         if groups is not None and job.status != "failed":
             group_results: List[GroupResult] = []
             primary_dir = payload.primary_dir
-            for idx, group in enumerate(groups):
-                stats = {str(path): image_stats(path) for path in group}
-                suggested = suggest_keeper(list(group), primary_dir)
-                group_results.append(
-                    GroupResult(
-                        id=idx + 1,
-                        files=[str(p) for p in group],
-                        suggested=str(suggested),
-                        stats=stats,
+
+            with ThreadPoolExecutor(max_workers=payload.workers) as executor:
+                # Submit each group for parallel processing
+                futures = [
+                    executor.submit(
+                        _process_group_for_suggestion,
+                        group,
+                        idx + 1,  # group_id
+                        primary_dir,
+                        payload.enable_sharpness_check,
                     )
-                )
+                    for idx, group in enumerate(groups)
+                ]
+
+                # Collect results as they complete
+                for future in futures:
+                    group_results.append(future.result())
+
             job.groups = group_results
             job.status = "succeeded"
             STORE.save_groups(job.id, group_results)

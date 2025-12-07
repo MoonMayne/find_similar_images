@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scanProgressText = document.getElementById('scanProgressText'); // New DOM element
     const workersInput = document.getElementById('workers');
     const trashDirInput = document.getElementById('trashDir');
+    const enableSharpnessCheck = document.getElementById('enableSharpnessCheck'); // New DOM element
 
     // --- DOM Elements (Review Screen) ---
     const screenScanSetup = document.getElementById('screen-scan-setup');
@@ -291,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             algorithm: algorithmInput.value,
             hash_size: parseInt(hashSizeInput.value, 10),
             workers: workersInput.value ? parseInt(workersInput.value, 10) : null,
+            enable_sharpness_check: enableSharpnessCheck.checked,
         };
 
         btnStartScan.disabled = true;

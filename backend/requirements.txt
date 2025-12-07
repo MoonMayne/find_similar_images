@@ -4,3 +4,4 @@ python-multipart
 send2trash
 duplicate-images
 jinja2
+opencv-python
