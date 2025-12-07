@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         magnifiedImagePath = imagePath;
         magnifiedImageIndex = selectedGroup.files.indexOf(imagePath);
-        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+        originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback for full image
         originalImageViewerModal.style.display = 'flex';
         
         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
@@ -959,7 +959,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         magnifiedImageIndex--;
                         magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
                         selectedImage = magnifiedImagePath;
-                        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+                        originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
                             magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         magnifiedImageIndex++;
                         magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
                         selectedImage = magnifiedImagePath;
-                        originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
+                        originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
                             magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
