@@ -498,21 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSelectedImageKept = keptPaths.has(selectedImage);
         const isSuggested = selectedImage === selectedGroup.suggested;
 
-        // Render hero image badge
-        const badge = document.createElement('div');
-        let badgeText = '';
-        let badgeClass = 'absolute top-2 left-2 text-white text-xs px-2 py-1 rounded-full';
 
-        if (isSelectedImageKept) {
-            badgeText = 'Kept';
-            badgeClass += ' bg-green-600';
-        } else {
-            badgeText = 'Deleted';
-            badgeClass += ' bg-red-600';
-        }
-        badge.textContent = badgeText;
-        badge.className = badgeClass;
-        heroImageContainer.appendChild(badge);
         
         // Add suggested dot for hero image if applicable
         if (selectedImage === selectedGroup.suggested) {
