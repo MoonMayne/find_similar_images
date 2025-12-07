@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSelectedImageKept = keptPaths.has(selectedImage);
         const isSuggested = selectedImage === selectedGroup.suggested;
 
-        heroImg.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}`;
+        heroImg.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
         
         let heroText = selectedImage;
         const imageStats = selectedGroup.stats[selectedImage];
@@ -322,24 +322,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
         thumbRow.innerHTML = '';
         selectedGroup.files.forEach(file => {
+            const thumbContainer = document.createElement('div');
+            thumbContainer.className = 'flex flex-col items-center space-y-1 mx-1 py-2'; // Container for image and tag
+
             const img = document.createElement('img');
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=128`;
-            img.className = 'h-24 rounded-md cursor-pointer border-2';
+            img.className = 'h-24 w-24 object-cover rounded-md cursor-pointer border-2 transition-all duration-200';
             
-            if (keptPaths.has(file)) {
+            const isThumbKept = keptPaths.has(file);
+            const isThumbSuggested = file === selectedGroup.suggested;
+
+            let tagText = '';
+            let tagClass = 'text-xs px-1 rounded';
+
+            if (isThumbSuggested) {
+                tagText = 'Suggested';
+                tagClass += ' bg-blue-600 text-white';
+            } else if (isThumbKept) {
+                tagText = 'Kept';
+                tagClass += ' bg-green-600 text-white';
+            } else {
+                tagText = 'Deleted';
+                tagClass += ' bg-red-600 text-white';
+            }
+
+            if (isThumbKept) {
                 img.classList.add('border-green-500');
             } else {
                 img.classList.add('border-red-500', 'opacity-50');
             }
 
             if (file === selectedImage) {
-                img.classList.add('!border-indigo-500', '!opacity-100'); // Override
+                img.classList.add('!border-indigo-500', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-indigo-400'); // Override
             }
             img.onclick = () => {
                 selectedImage = file;
                 renderSelectedGroup();
             };
-            thumbRow.appendChild(img);
+            
+            thumbContainer.appendChild(img);
+            if (tagText) {
+                const tag = document.createElement('div');
+                tag.textContent = tagText;
+                tag.className = tagClass;
+                thumbContainer.appendChild(tag);
+            }
+
+            thumbRow.appendChild(thumbContainer);
         });
     }
 
