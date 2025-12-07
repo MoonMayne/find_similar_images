@@ -71,3 +71,19 @@ The script will add `side-by-side-grid-2` or `side-by-side-grid-3` to the parent
     font-size: 1.1rem;
     z-index: 1001;
 }
+
+/* Style for the suggested dot indicator */
+.suggested-dot {
+    width: 8px; /* Tailwind w-2 */
+    height: 8px; /* Tailwind h-2 */
+    border-radius: 9999px; /* Tailwind rounded-full */
+    background-color: #3B82F6; /* Tailwind bg-blue-500 */
+    display: inline-block;
+    margin-left: 4px; /* Tailwind ml-1 */
+    flex-shrink: 0; /* Prevent it from shrinking */
+}
+
+.suggested-dot.hero-dot {
+    width: 12px; /* Tailwind w-3 */
+    height: 12px; /* Tailwind h-3 */
+}

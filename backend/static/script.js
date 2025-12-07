@@ -99,7 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
         magnifiedImageIndex = selectedGroup.files.indexOf(imagePath);
         originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
         originalImageViewerModal.style.display = 'flex';
-        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+        
+        let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+        if (magnifiedImagePath === selectedGroup.suggested) {
+            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+        } else {
+            magnifiedImageIndexDisplay.textContent = indexText;
+        }
         document.body.classList.add('overflow-hidden'); // Prevent background scrolling
     }
 
@@ -108,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         magnifiedImageIndex = -1;
         originalImageViewerModal.style.display = 'none';
         originalImageSrc.src = '';
-        magnifiedImageIndexDisplay.textContent = '';
+        magnifiedImageIndexDisplay.innerHTML = ''; // Clear content including the dot
         document.body.classList.remove('overflow-hidden');
     }
 
@@ -439,6 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             const thumbnailUrl = group.suggested ? `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(group.suggested)}&max_size=64` : '';
+            const isGroupSuggested = group.suggested;
 
             div.innerHTML = `
                 <div class="flex items-center space-x-2">
@@ -450,7 +457,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                             </svg>` : ''}
                         </div>
-                        <div class="text-sm text-gray-400">${statusText}</div>
+                        <div class="text-sm text-gray-400 flex items-center space-x-1">
+                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-red-600' : 'bg-green-600'} text-white px-2 py-0.5 rounded-full text-xs">
+                                ${decisionStatus === 'deleted' ? 'Deleted' : 'Kept'}
+                            </span>
+                            ${isGroupSuggested ? '<span class="suggested-dot bg-blue-500 rounded-full w-2 h-2"></span>' : ''}
+                        </div>
                     </div>
                 </div>
             `;
@@ -486,18 +498,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render hero image badge
         const badge = document.createElement('div');
-        badge.className = 'absolute top-2 left-2 bg-indigo-600 text-white text-xs px-2 py-1 rounded-full';
-        if (isSuggested) {
-            badge.textContent = 'Suggested';
-            badge.classList.replace('bg-indigo-600', 'bg-blue-600');
-        } else if (isSelectedImageKept) {
-            badge.textContent = 'Kept';
-            badge.classList.replace('bg-indigo-600', 'bg-green-600');
+        let badgeText = '';
+        let badgeClass = 'absolute top-2 left-2 text-white text-xs px-2 py-1 rounded-full';
+
+        if (isSelectedImageKept) {
+            badgeText = 'Kept';
+            badgeClass += ' bg-green-600';
         } else {
-            badge.textContent = 'To be Deleted';
-            badge.classList.replace('bg-indigo-600', 'bg-red-600');
+            badgeText = 'Deleted';
+            badgeClass += ' bg-red-600';
         }
+        badge.textContent = badgeText;
+        badge.className = badgeClass;
         heroImageContainer.appendChild(badge);
+        
+        // Add suggested dot for hero image if applicable
+        if (selectedImage === selectedGroup.suggested) {
+            const suggestedDot = document.createElement('span');
+            suggestedDot.className = 'suggested-dot hero-dot bg-blue-500 rounded-full w-3 h-3 absolute top-2 right-2'; // Position as needed
+            heroImageContainer.appendChild(suggestedDot);
+        }
 
         const heroTextEl = document.createElement('div');
         heroTextEl.className = 'text-center text-gray-400 mt-2';
@@ -579,19 +599,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const isThumbKept = keptPaths.has(file);
             const isThumbSuggested = file === selectedGroup.suggested;
 
-            let tagText = '';
-            let tagClass = 'text-xs px-1 rounded';
-
-            if (isThumbSuggested) {
-                tagText = 'Suggested';
-                tagClass += ' bg-blue-600 text-white';
-            } else if (isThumbKept) {
-                tagText = 'Kept';
-                tagClass += ' bg-green-600 text-white';
-            } else {
-                tagText = 'Deleted';
-                tagClass += ' bg-red-600 text-white';
-            }
+            let tagText = isThumbKept ? 'Kept' : 'Deleted';
+            let tagClass = `text-xs px-1 rounded ${isThumbKept ? 'bg-green-600' : 'bg-red-600'} text-white flex items-center space-x-1`;
 
             if (isThumbKept) {
                 img.classList.add('border-green-500');
@@ -608,12 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             thumbContainer.appendChild(img);
-            if (tagText) {
-                const tag = document.createElement('div');
-                tag.textContent = tagText;
-                tag.className = tagClass;
-                thumbContainer.appendChild(tag);
-            }
+            // Always show the tag based on decision
+            const tag = document.createElement('div');
+            tag.className = tagClass;
+            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-blue-500 rounded-full w-2 h-2"></span>' : ''}`;
+            thumbContainer.appendChild(tag);
 
             // Add an additional click handler to thumbContainer for selection, distinct from preview
             thumbContainer.addEventListener('click', () => {
@@ -682,6 +690,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Auto-advance
         advanceToNextGroup();
     }
+
+    function keepThisAndDeleteOthers() {
+        if (!selectedGroup || !selectedImage) return;
+        visitedGroups.add(selectedGroup.id);
+
+        const keptPaths = new Set();
+        keptPaths.add(selectedImage); // Keep only the selected image
+
+        decisions.set(selectedGroup.id, keptPaths);
+        updatePendingActions();
+        renderGroupList();
+        renderSelectedGroup();
+        // Auto-advance
+        advanceToNextGroup();
+    }
+
 
     function advanceToPreviousGroup() {
         if (!selectedGroup || currentGroups.length === 0) return;
@@ -932,8 +956,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (selectedGroup && magnifiedImageIndex > 0) {
                         magnifiedImageIndex--;
                         magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
+                        selectedImage = magnifiedImagePath;
                         originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
-                        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                        let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                        if (magnifiedImagePath === selectedGroup.suggested) {
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                        } else {
+                            magnifiedImageIndexDisplay.textContent = indexText;
+                        }
                     }
                     handled = true;
                     break;
@@ -941,8 +971,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (selectedGroup && magnifiedImageIndex < selectedGroup.files.length - 1) {
                         magnifiedImageIndex++;
                         magnifiedImagePath = selectedGroup.files[magnifiedImageIndex];
+                        selectedImage = magnifiedImagePath;
                         originalImageSrc.src = `/api/original-image/${currentJobId}/${encodeURIComponent(magnifiedImagePath)}`;
-                        magnifiedImageIndexDisplay.textContent = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                        let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
+                        if (magnifiedImagePath === selectedGroup.suggested) {
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                        } else {
+                            magnifiedImageIndexDisplay.textContent = indexText;
+                        }
                     }
                     handled = true;
                     break;
@@ -1004,6 +1040,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 trashNonSuggested();
                 handled = true;
                 break;
+            case 'p': // Keep This and Delete Others (Primary Keep)
+                keepThisAndDeleteOthers();
+                handled = true;
+                break;
+
         }
 
         if (handled) {
@@ -1020,6 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isMagnifyMode) {
                     isMagnifyMode = false;
                     closeMagnifiedImage();
+                    renderSelectedGroup(); // Add this line
                 }
                 handled = true;
                 break;
