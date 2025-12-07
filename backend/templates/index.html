@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Similar Images</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-gray-800 text-gray-200">
+
+    <div class="container mx-auto p-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-white">Find Similar Images</h1>
+            <p class="text-gray-400">Scan directories to find and manage duplicate images.</p>
+        </header>
+
+        <!-- Scan Setup Screen -->
+        <main id="screen-scan-setup">
+            <div class="bg-gray-900 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-6 text-white">Scan Setup</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <!-- Left Column: Directories -->
+                    <div>
+                        <label for="dirInput" class="block text-sm font-medium text-gray-300 mb-2">Image Directories</label>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <input type="text" id="dirInput" placeholder="/path/to/your/images" class="flex-grow bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <button id="btnAddDir" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Add</button>
+                        </div>
+                        <div id="dirList" class="bg-gray-800 border border-gray-700 rounded-md p-3 min-h-[150px] max-h-64 overflow-y-auto">
+                            <!-- Directory items will be injected here -->
+                        </div>
+                        <button id="btnRemoveDir" class="mt-3 text-sm text-red-500 hover:text-red-400 transition duration-300">Remove Selected</button>
+                    </div>
+
+                    <!-- Middle Column: Required Options -->
+                    <div>
+                        <div class="space-y-6">
+                            <div>
+                                <label for="primaryDir" class="block text-sm font-medium text-gray-300">Primary Directory</label>
+                                <p class="text-xs text-gray-500 mb-2">Files in this directory will be preferred as keepers.</p>
+                                <select id="primaryDir" class="mt-1 block w-full bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">(Select from added directories)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label for="algorithm" class="block text-sm font-medium text-gray-300">Algorithm</label>
+                                <select id="algorithm" class="mt-1 block w-full bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="phash" selected>Perceptual Hash (phash)</option>
+                                    <option value="ahash">Average Hash (ahash)</option>
+                                    <option value="dhash">Difference Hash (dhash)</option>
+                                    <option value="dhash_vertical">Vertical Difference Hash</option>
+                                    <option value="phash_simple">Simple Perceptual Hash</option>
+                                    <option value="whash">Wavelet Hash (whash)</option>
+                                    <option value="colorhash">Color Hash</option>
+                                    <option value="crop_resistant">Crop Resistant Hash</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="hashSize" class="block text-sm font-medium text-gray-300">Hash Size</label>
+                                <p class="text-xs text-gray-500 mb-2">Higher values are stricter. For whash, must be power of 2. For colorhash, bin bits.</p>
+                                <input type="number" id="hashSize" value="8" min="2" max="64" class="mt-1 block w-full bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Advanced Settings (Always Visible) -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300 mb-4">Advanced Settings</h3>
+                        <div id="advancedOptions" class="space-y-6">
+                            <div>
+                                <label for="workers" class="block text-sm font-medium text-gray-300">Number of Workers</label>
+                                <p class="text-xs text-gray-500 mb-2">Number of parallel threads for hashing. Defaults to CPU count.</p>
+                                <input type="number" id="workers" min="1" class="mt-1 block w-full bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="trashDir" class="block text-sm font-medium text-gray-300">Custom Trash Directory</label>
+                                <p class="text-xs text-gray-500 mb-2">Specify a custom directory to move deleted files to. Defaults to system trash.</p>
+                                <input type="text" id="trashDir" placeholder="/path/to/custom/trash" class="mt-1 block w-full bg-gray-700 text-white border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="mt-8 border-t border-gray-700 pt-6 flex items-center justify-between">
+                    <div>
+                        <button id="btnStartScan" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md transition duration-300">Start Scan</button>
+                        <button id="btnGoReview" class="ml-4 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-md transition duration-300" disabled>Go to Review</button>
+                    </div>
+                    <div id="scanStatus" class="text-sm text-gray-400"></div>
+                </div>
+                 <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4" id="scanProgress" style="display:none;">
+                    <div id="scanProgressFill" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Review Screen (hidden by default) -->
+        <section id="screen-review" style="display: none;" class="bg-gray-900 p-6 rounded-lg shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6 text-white">Review Duplicates</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Column: Group List -->
+                <div class="lg:col-span-1 bg-gray-800 border border-gray-700 rounded-md p-3 max-h-[70vh] overflow-y-auto" id="groupList">
+                    <!-- Group items will be injected here -->
+                </div>
+
+                <!-- Right Column: Image Preview and Actions -->
+                <div class="lg:col-span-2">
+                    <div class="bg-gray-800 rounded-lg shadow-inner p-4">
+                        <div class="relative mb-4" id="heroImageContainer">
+                            <img id="heroImg" src="" alt="Selected image" class="w-full h-auto max-h-[60vh] object-contain rounded-md bg-gray-900">
+                            <div id="heroImageBadge" class="absolute top-2 left-2 bg-indigo-600 text-white text-xs px-2 py-1 rounded-full" style="display: none;"></div>
+                            <div id="heroImageText" class="text-center text-gray-400"></div>
+                        </div>
+                        <div id="thumbRow" class="flex items-center space-x-3 overflow-x-auto pb-2">
+                            <!-- Thumbnails will be injected here -->
+                        </div>
+                    </div>
+                     <div class="mt-6 border-t border-gray-700 pt-4 flex items-center justify-between">
+                        <div class="flex space-x-2">
+                            <button id="actToggleKeep" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Toggle Keep (K)</button>
+                            <button id="actKeepAll" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Keep All</button>
+                            <button id="actDeleteAll" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Delete All (D)</button>
+                            <button id="actTrashNonSuggested" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Trash Non-Suggested (O)</button>
+                        </div>
+                        <div class="flex items-center">
+                            <span id="pendingText" class="text-sm text-gray-400 mr-4"></span>
+                            <button id="btnFinalize" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-md transition duration-300">Finalize</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- Finalize Modal -->
+            <div id="finalizeModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center" style="display: none;">
+                <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md">
+                    <h3 class="text-2xl font-bold text-white mb-4">Finalize Actions</h3>
+                    <p id="finalizeMessage" class="text-gray-300 mb-6"></p>
+                    <p id="unreviewedWarning" class="text-yellow-400 mb-4" style="display: none;">You have unreviewed groups. How would you like to proceed?</p>
+                    <div class="flex flex-col space-y-4">
+                        <button id="optContinueReview" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Continue Reviewing</button>
+                        <button id="optKeepSuggested" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Keep All Suggested (Delete Others)</button>
+                        <button id="optKeepPrimary" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Keep All in Primary Directory (Delete Others)</button>
+                        <button id="optApplyTrash" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">Apply Decisions & Trash</button>
+                    </div>
+                    <button id="btnCancelFinalize" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md">Cancel</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

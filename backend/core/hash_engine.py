@@ -66,30 +66,28 @@ def _pairs_to_groups(pairs: Sequence[Tuple[Path, Path]]) -> List[Tuple[Path, ...
 
 def scan_and_group(
     directories: List[Path],
-    threshold: int = 0,
+    hash_size: Optional[int] = None,
     workers: Optional[int] = None,
     algorithm: str = "phash",
-    hash_size: Optional[int] = None,
     hash_db: Optional[Path] = None,
     exclude_regexes: Optional[List[str]] = None,
 ) -> List[Tuple[Path, ...]]:
     """
     Run duplicate_images against the provided directories and return grouped tuples of similar files.
-    threshold: max Hamming distance for similarity (0 = exact).
+    Groups only (no max_distance) for performance and better review UX.
     workers: number of threads for hashing (None = library default).
     """
     if not directories:
         return []
-    # duplicate_images groups only when max_distance == 0; for similarity >0 we request pairs and merge.
     options = PairFinderOptions(
-        max_distance=threshold,
+        max_distance=0,
         hash_size=hash_size,
         show_progress_bars=False,
         parallel=workers,
         slow=False,
-        group=False,
+        group=True,
     )
-    logging.info("Starting scan for %d directories with threshold=%s", len(directories), threshold)
+    logging.info("Starting scan for %d directories (hash_size=%s)", len(directories), hash_size)
     matches = get_matches(
         root_directories=[Path(d) for d in directories],
         algorithm=algorithm,
@@ -97,13 +95,7 @@ def scan_and_group(
         hash_store_path=hash_db,
         exclude_regexes=exclude_regexes,
     )
-    # matches is a list of tuples (pair) when group=False
-    pairs = [m for m in matches if len(m) == 2]
-    filtered_pairs = [
-        (a, b)
-        for (a, b) in pairs
-        if a.suffix.lower() in SUPPORTED_EXTENSIONS and b.suffix.lower() in SUPPORTED_EXTENSIONS
-    ]
-    groups = _pairs_to_groups(filtered_pairs)
-    logging.info("Found %d groups from %d pairs", len(groups), len(filtered_pairs))
-    return groups
+    # matches is already grouped when group=True
+    grouped = [tuple(sorted(m)) for m in matches if len(m) > 1]
+    logging.info("Found %d groups", len(grouped))
+    return grouped

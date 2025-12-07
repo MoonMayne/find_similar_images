@@ -27,11 +27,10 @@ JOB_STORE.reset(STORE.load_jobs())
 class ScanRequest(BaseModel):
     directories: List[Path] = Field(..., description="List of directories to scan")
     primary_dir: Optional[Path] = Field(None, description="Primary directory to keep")
-    threshold: int = Field(DEFAULT_THRESHOLD, ge=0, le=64, description="Max Hamming distance")
+    hash_size: Optional[int] = Field(None, ge=2, le=64, description="Hash size (tunes similarity)")
     workers: Optional[int] = Field(DEFAULT_WORKERS, ge=1, description="Thread count for hashing")
     algorithm: str = Field("phash", description="duplicate_images algorithm")
     hash_db: Optional[Path] = Field(HASH_DB, description="Path to hash cache (JSON)")
-    hash_size: Optional[int] = Field(None, ge=2, le=32, description="Hash size")
     exclude_regexes: Optional[List[str]] = Field(None, description="Regex to exclude paths")
 
     @validator("directories", each_item=True)
@@ -117,10 +116,9 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
     try:
         groups = scan_and_group(
             directories=[p for p in payload.directories],
-            threshold=payload.threshold,
+            hash_size=payload.hash_size,
             workers=payload.workers,
             algorithm=payload.algorithm,
-            hash_size=payload.hash_size,
             hash_db=payload.hash_db,
             exclude_regexes=payload.exclude_regexes,
         )
@@ -155,7 +153,7 @@ def start_scan(payload: ScanRequest) -> ScanResponse:
     job = JOB_STORE.create(
         directories=[str(p) for p in payload.directories],
         primary_dir=str(payload.primary_dir) if payload.primary_dir else None,
-        threshold=payload.threshold,
+        threshold=0,
         algorithm=payload.algorithm,
         workers=payload.workers,
         hash_db=str(payload.hash_db) if payload.hash_db else None,
@@ -180,9 +178,38 @@ def list_groups(job_id: str, limit: int = 50, offset: int = 0) -> GroupsResponse
     job = JOB_STORE.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    selected = job.groups[offset : offset + limit]
+
+    filtered_groups: List[GroupResult] = []
+    for group_result in job.groups:
+        existing_files: List[str] = []
+        for file_path in group_result.files:
+            if Path(file_path).exists():
+                existing_files.append(file_path)
+
+        if existing_files:
+            updated_suggested: Optional[str] = group_result.suggested
+            if updated_suggested and not Path(updated_suggested).exists():
+                updated_suggested = existing_files[0] if existing_files else None
+
+            # If suggested becomes None but there are existing files, pick the first one
+            if not updated_suggested and existing_files:
+                updated_suggested = existing_files[0]
+
+            filtered_groups.append(
+                GroupResult(
+                    id=group_result.id,
+                    files=existing_files,
+                    suggested=updated_suggested,
+                    stats=group_result.stats, # Keep original stats, they might contain info for deleted files
+                )
+            )
+    
+    # Sort groups by ID after filtering
+    filtered_groups.sort(key=lambda g: g.id)
+
+    selected = filtered_groups[offset : offset + limit]
     group_out = [GroupOut(**gr.__dict__) for gr in selected]
-    return GroupsResponse(job_id=job.id, total_groups=len(job.groups), groups=group_out)
+    return GroupsResponse(job_id=job.id, total_groups=len(filtered_groups), groups=group_out)
 
 
 @router.post("/actions/trash")
@@ -215,6 +242,18 @@ def rebuild_db():
     STORE.rebuild()
     JOB_STORE.reset([])
     return {"status": "ok", "message": "Database rebuilt (tables recreated and cleared)"}
+
+
+@router.get("/latest-job")
+def get_latest_job() -> Dict[str, Optional[str]]:
+    jobs = JOB_STORE.all()
+    active_jobs = [job for job in jobs if job.status in ["succeeded", "running", "pending"]]
+    if not active_jobs:
+        return {"job_id": None, "status": "none"}
+    
+    # Sort by created_at descending to get the most recent
+    latest_job = sorted(active_jobs, key=lambda job: job.created_at, reverse=True)[0]
+    return {"job_id": latest_job.id, "status": latest_job.status}
 
 
 @router.get("/thumbnail")

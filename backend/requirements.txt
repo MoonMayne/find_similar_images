@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+python-multipart
 send2trash
-duplicate_images
-pillow
+duplicate-images
+jinja2

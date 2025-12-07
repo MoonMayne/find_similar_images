@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from backend.api.routes import router
+
+templates = Jinja2Templates(directory="backend/templates")
 
 
 def create_app() -> FastAPI:
@@ -19,9 +22,12 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router, prefix="/api")
-    static_dir = Path(__file__).resolve().parent.parent / "frontend"
-    if static_dir.exists():
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
+    app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+
+    @app.get("/")
+    async def root(request: Request):
+        return templates.TemplateResponse("index.html", {"request": request})
+
     return app
 
 
