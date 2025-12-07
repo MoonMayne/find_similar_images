@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
             img.id = 'heroImg';
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
             img.alt = 'Selected image';
-            img.className = 'w-full h-auto max-h-full object-contain rounded-md bg-gray-900';
+            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-gray-900';
             heroImageContainer.appendChild(img);
             
             let heroText = selectedImage;

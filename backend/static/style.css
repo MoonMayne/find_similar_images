@@ -1,9 +1,11 @@
 #heroImageContainer {
-    height: 60vh; /* Ensure the container has a fixed height for better vertical image alignment */
+    /* height: 60vh;  Removed fixed height for responsiveness */
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    flex-grow: 1; /* Allow it to grow and take available space */
+    min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .side-by-side-img-container {
