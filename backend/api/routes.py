@@ -39,7 +39,7 @@ class ScanRequest(BaseModel):
     @validator("directories", each_item=True)
     def _must_exist(cls, value: Path) -> Path:
         if not value.exists() or not value.is_dir():
-            raise ValueError(f"Directory not found: {value}")
+            raise ValueError(f"DirectoryNotFound:{value}")
         return value.resolve()
 
     @validator("primary_dir")

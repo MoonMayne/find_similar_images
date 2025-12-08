@@ -326,18 +326,35 @@ document.addEventListener('DOMContentLoaded', () => {
             currentJobId = data.job_id;
             pollStatus(currentJobId);
 
-        } catch (error) {
-            scanStatusEl.textContent = `Error: ${error.message}`;
-            btnStartScan.disabled = false;
-            scanProgress.style.display = 'none';
+                } catch (error) {
 
-            // Revert btnGoReview and scanStatusEl to initial state if a previous job was loaded
-            if (initialGoReviewEnabled) { 
-                btnGoReview.disabled = false; // Set to initial disabled state (should be false if enabled)
-                scanStatusEl.textContent = initialScanStatusMessage; // Restore initial status message
-            }
+                    btnStartScan.disabled = false; // Always re-enable start scan button
 
-        }
+                    scanProgress.style.display = 'none'; // Hide progress bar
+
+        
+
+                    let errorMessage = `Error. Directory not found.`;
+
+                    
+
+                    // If a previous job was loaded, let the user know they can still review it.
+
+                    if (initialGoReviewEnabled) { 
+
+                        btnGoReview.disabled = false; // Ensure Go to Review button is enabled
+
+                        scanStatusEl.textContent = `${errorMessage} You can still ${initialScanStatusMessage.toLowerCase()}.`;
+
+                    } else {
+
+                        // If no previous job was loaded, just display the error.
+
+                        scanStatusEl.textContent = errorMessage;
+
+                    }
+
+                }
     }
 
     async function pollStatus(jobId) {
@@ -1099,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (job.job_id && (job.status === 'succeeded' || job.status === 'running')) {
             currentJobId = job.job_id;
             btnGoReview.disabled = false;
-            scanStatusEl.textContent = `Previous scan loaded: ${job.job_id.substring(0, 8)}... (Status: ${job.status}). Click 'Go to Review' to continue.`;
+            scanStatusEl.textContent = `Scan loaded. Click 'Go to Review'.`;
             
             // Capture initial state here
             initialGoReviewEnabled = !btnGoReview.disabled; // True if button is enabled
