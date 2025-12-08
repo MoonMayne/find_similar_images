@@ -144,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let directories = [];
     let selectedDir = null;
     let currentJobId = null;
+    let initialGoReviewEnabled = false;
+    let initialScanStatusMessage = '';
 
     // --- Review Screen State ---
     let allGroups = []; // Store the original fetched groups
@@ -328,6 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
             scanStatusEl.textContent = `Error: ${error.message}`;
             btnStartScan.disabled = false;
             scanProgress.style.display = 'none';
+
+            // Revert btnGoReview and scanStatusEl to initial state if a previous job was loaded
+            if (initialGoReviewEnabled) { 
+                btnGoReview.disabled = false; // Set to initial disabled state (should be false if enabled)
+                scanStatusEl.textContent = initialScanStatusMessage; // Restore initial status message
+            }
+
         }
     }
 
@@ -443,11 +452,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let statusText = `Kept: ${keptCount}, Deleted: ${deletedCount}`;
             const decisionStatus = getGroupDecisionStatus(group); // Use helper for status
             if (decisionStatus === 'deleted') {
-                statusText = `<span class="text-red-400">All Deleted</span>`;
+                statusText = `<span class="text-rose-400">All Deleted</span>`;
             } else if (decisionStatus === 'kept') {
                 statusText = `<span class="text-green-400">All Kept</span>`;
             } else if (decisionStatus === 'mixed') {
-                statusText = `<span class="text-yellow-400">Mixed</span>`;
+                statusText = `<span class="text-amber-400">Mixed</span>`;
             }
 
 
@@ -460,20 +469,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex-grow">
                         <div class="flex items-center space-x-2">
                             <span>Group ${group.id} (${group.files.length} images)</span>
-                            ${visitedGroups.has(group.id) ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                            ${visitedGroups.has(group.id) ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                             </svg>` : ''}
                         </div>
                         <div class="text-sm text-gray-400 flex items-center space-x-1">
-                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-red-600' : 'bg-green-600'} text-white px-2 py-0.5 rounded-full text-xs">
+                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-rose-700' : 'bg-emerald-600'} text-white px-2 py-0.5 rounded-full text-xs">
                                 ${decisionStatus === 'deleted' ? 'Deleted' : 'Kept'}
                             </span>
-                            ${isGroupSuggested ? '<span class="suggested-dot bg-blue-500 rounded-full w-2 h-2"></span>' : ''}
+                            ${isGroupSuggested ? '<span class="suggested-dot bg-cyan-500 rounded-full w-2 h-2"></span>' : ''}
                         </div>
                     </div>
                 </div>
             `;
-            div.className = 'p-3 rounded-md cursor-pointer hover:bg-gray-700';
+            div.className = 'p-3 rounded-md cursor-pointer hover:bg-purple-700';
 
             if (selectedGroup && group.id === selectedGroup.id) {
                 div.classList.add('bg-indigo-600', 'text-white');
@@ -534,22 +543,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const imgContainer = document.createElement('div');
                 // Use custom class for styling and flex properties
-                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-gray-800';
+                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-purple-800';
 
                 const img = document.createElement('img');
                 img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=1024`;
                 img.alt = file;
-                img.className = 'w-full h-full object-contain rounded-md bg-gray-900'; // object-contain for vertical fitting
+                img.className = 'w-full h-full object-contain rounded-md bg-purple-900'; // object-contain for vertical fitting
 
                 const imgLabel = document.createElement('div');
                 let labelText = file.split('/').pop(); // Display just the filename
                 if (isCurrentFileSelected) {
                     labelText = `(Selected) ${labelText}`;
-                    imgLabel.classList.add('text-indigo-400', 'font-bold');
+                    imgLabel.classList.add('text-cyan-400', 'font-bold');
                 }
                 if (isCurrentFileSuggested) {
                     labelText = `(Suggested) ${labelText}`;
-                    imgLabel.classList.add('text-blue-400', 'font-bold');
+                    imgLabel.classList.add('text-cyan-400', 'font-bold');
                 }
                 imgLabel.textContent = labelText;
                 imgLabel.className += ' text-sm text-gray-400 mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
@@ -613,7 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Always show the tag based on decision
             const tag = document.createElement('div');
             tag.className = tagClass;
-            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-blue-500 rounded-full w-2 h-2"></span>' : ''}`;
+            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-cyan-500 rounded-full w-2 h-2"></span>' : ''}`;
             thumbContainer.appendChild(tag);
 
             // Add an additional click handler to thumbContainer for selection, distinct from preview
@@ -1091,8 +1100,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentJobId = job.job_id;
             btnGoReview.disabled = false;
             scanStatusEl.textContent = `Previous scan loaded: ${job.job_id.substring(0, 8)}... (Status: ${job.status}). Click 'Go to Review' to continue.`;
-            // Also update primaryDirInput from the loaded job
-            // For now, assume primaryDirInput is not managed by job load
+            
+            // Capture initial state here
+            initialGoReviewEnabled = !btnGoReview.disabled; // True if button is enabled
+            initialScanStatusMessage = scanStatusEl.textContent;
         }
+        // Also update primaryDirInput from the loaded job
+        // For now, assume primaryDirInput is not managed by job load
     });
 });
