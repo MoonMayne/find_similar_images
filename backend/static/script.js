@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Original Image Viewer Modal Elements
     const originalImageViewerModal = document.getElementById('originalImageViewerModal');
     const originalImageSrc = document.getElementById('originalImageSrc');
-    const originalImageClose = document.getElementById('originalImageClose');
+    
     const magnifiedImageIndexDisplay = document.getElementById('magnifiedImageIndexDisplay'); // New DOM element
 
     // --- Magnify Mode State ---
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event listeners for closing the original image viewer modal (magnify mode)
-    originalImageClose.addEventListener('click', closeMagnifiedImage);
+    
     originalImageViewerModal.addEventListener('click', (e) => {
         if (e.target === originalImageViewerModal) { // Only close if clicked on the overlay
             closeMagnifiedImage();
@@ -513,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const heroTextEl = document.createElement('div');
-        heroTextEl.className = 'text-center text-gray-400 mt-2';
+        heroTextEl.className = 'text-left text-gray-300 mt-4';
 
         // Determine if side-by-side view is possible
         const canUseSideBySide = selectedGroup.files.length >= 2 && selectedGroup.files.length <= 3;
@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         thumbRow.innerHTML = '';
         selectedGroup.files.forEach(file => {
             const thumbContainer = document.createElement('div');
-            thumbContainer.className = 'flex flex-col items-center space-y-1 mx-1 py-2'; // Container for image and tag
+            thumbContainer.className = 'flex flex-col items-center space-y-1 mx-2 py-3'; // Container for image and tag
 
             const img = document.createElement('img');
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=128`;
