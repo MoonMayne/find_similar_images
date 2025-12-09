@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
         if (magnifiedImagePath === selectedGroup.suggested) {
-            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
         } else {
             magnifiedImageIndexDisplay.textContent = indexText;
         }
@@ -278,13 +278,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const icon = document.createElement('span');
             icon.className = 'flex-shrink-0';
             if (isValid === true) {
-                // Green checkmark for valid
-                icon.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                // Purple checkmark for valid
+                icon.innerHTML = `<svg class="w-5 h-5 text-[#9c539c]" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>`;
             } else if (isInvalid) {
                 // Red X for invalid
-                icon.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                icon.innerHTML = `<svg class="w-5 h-5 text-[#ef4444]" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                 </svg>`;
             }
@@ -303,11 +303,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Apply validation-based styling
             if (isInvalid) {
-                div.classList.add('bg-red-900', 'border-2', 'border-red-500', 'text-red-100', 'hover:bg-red-800');
+                div.classList.add('bg-[#401f54]', 'border-2', 'border-[#ef4444]', 'text-[#e8dcf5]', 'hover:bg-[#552d70]');
             } else if (dir === selectedDir) {
-                div.classList.add('bg-indigo-600', 'text-white');
+                div.classList.add('bg-[#804595]', 'text-[#e8dcf5]');
             } else {
-                div.classList.add('hover:bg-gray-700');
+                div.classList.add('hover:bg-[#1a0f2e]');
             }
 
             div.onclick = () => {
@@ -607,11 +607,11 @@ document.addEventListener('DOMContentLoaded', () => {
             let statusText = `Kept: ${keptCount}, Deleted: ${deletedCount}`;
             const decisionStatus = getGroupDecisionStatus(group); // Use helper for status
             if (decisionStatus === 'deleted') {
-                statusText = `<span class="text-rose-400">All Deleted</span>`;
+                statusText = `<span class="text-[#c967a2]">All Deleted</span>`;
             } else if (decisionStatus === 'kept') {
-                statusText = `<span class="text-green-400">All Kept</span>`;
+                statusText = `<span class="text-[#9c539c]">All Kept</span>`;
             } else if (decisionStatus === 'mixed') {
-                statusText = `<span class="text-amber-400">Mixed</span>`;
+                statusText = `<span class="text-[#d876a9]">Mixed</span>`;
             }
 
 
@@ -624,23 +624,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex-grow">
                         <div class="flex items-center space-x-2">
                             <span>Group ${group.id} (${group.files.length} images)</span>
-                            ${visitedGroups.has(group.id) ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                            ${visitedGroups.has(group.id) ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#9c539c]" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                             </svg>` : ''}
                         </div>
-                        <div class="text-sm text-gray-400 flex items-center space-x-1">
-                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-rose-700' : 'bg-emerald-600'} text-white px-2 py-0.5 rounded-full text-xs">
+                        <div class="text-sm text-[#a695c7] flex items-center space-x-1">
+                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-[#c967a2]' : 'bg-[#9c539c]'} text-[#e8dcf5] px-2 py-0.5 rounded-full text-xs">
                                 ${decisionStatus === 'deleted' ? 'Deleted' : 'Kept'}
                             </span>
-                            ${isGroupSuggested ? '<span class="suggested-dot bg-cyan-500 rounded-full w-2 h-2"></span>' : ''}
+                            ${isGroupSuggested ? '<span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2"></span>' : ''}
                         </div>
                     </div>
                 </div>
             `;
-            div.className = 'p-3 rounded-md cursor-pointer hover:bg-purple-700';
+            div.className = 'p-3 rounded-md cursor-pointer hover:bg-[#552d70]';
 
             if (selectedGroup && group.id === selectedGroup.id) {
-                div.classList.add('bg-indigo-600', 'text-white');
+                div.classList.add('bg-[#804595]', 'text-[#e8dcf5]');
             }
             div.onclick = () => {
                 selectedGroup = group;
@@ -659,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
         heroImageContainer.innerHTML = ''; // Clear existing content
 
         if (!selectedGroup) {
-            heroImageContainer.innerHTML = '<div class="text-center text-gray-400">No group selected.</div>';
+            heroImageContainer.innerHTML = '<div class="text-center text-[#a695c7]">No group selected.</div>';
             return;
         }
 
@@ -668,16 +668,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSuggested = selectedImage === selectedGroup.suggested;
 
 
-        
+
         // Add suggested dot for hero image if applicable
         if (selectedImage === selectedGroup.suggested) {
             const suggestedDot = document.createElement('span');
-            suggestedDot.className = 'suggested-dot hero-dot bg-blue-500 rounded-full w-3 h-3 absolute top-2 right-2'; // Position as needed
+            suggestedDot.className = 'suggested-dot hero-dot bg-[#d876a9] rounded-full w-3 h-3 absolute top-2 right-2'; // Position as needed
             heroImageContainer.appendChild(suggestedDot);
         }
 
         const heroTextEl = document.createElement('div');
-        heroTextEl.className = 'text-left text-gray-300 mt-4';
+        heroTextEl.className = 'text-left text-[#c9b8e3] mt-4';
 
         // Determine if side-by-side view is possible
         const canUseSideBySide = selectedGroup.files.length >= 2 && selectedGroup.files.length <= 3;
@@ -698,25 +698,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const imgContainer = document.createElement('div');
                 // Use custom class for styling and flex properties
-                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-purple-800';
+                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-[#251747]';
 
                 const img = document.createElement('img');
                 img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=1024`;
                 img.alt = file;
-                img.className = 'w-full h-full object-contain rounded-md bg-purple-900'; // object-contain for vertical fitting
+                img.className = 'w-full h-full object-contain rounded-md bg-[#1a0f2e]'; // object-contain for vertical fitting
 
                 const imgLabel = document.createElement('div');
                 let labelText = file.split('/').pop(); // Display just the filename
                 if (isCurrentFileSelected) {
                     labelText = `(Selected) ${labelText}`;
-                    imgLabel.classList.add('text-cyan-400', 'font-bold');
+                    imgLabel.classList.add('text-[#d876a9]', 'font-bold');
                 }
                 if (isCurrentFileSuggested) {
                     labelText = `(Suggested) ${labelText}`;
-                    imgLabel.classList.add('text-cyan-400', 'font-bold');
+                    imgLabel.classList.add('text-[#d876a9]', 'font-bold');
                 }
                 imgLabel.textContent = labelText;
-                imgLabel.className += ' text-sm text-gray-400 mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
+                imgLabel.className += ' text-sm text-[#a695c7] mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
 
 
                 imgContainer.appendChild(img);
@@ -732,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
             img.id = 'heroImg';
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
             img.alt = 'Selected image';
-            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-gray-900';
+            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-[#1a0f2e]';
             heroImageContainer.appendChild(img);
             
             let heroText = selectedImage;
@@ -757,16 +757,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const isThumbSuggested = file === selectedGroup.suggested;
 
             let tagText = isThumbKept ? 'Kept' : 'Deleted';
-            let tagClass = `text-xs px-1 rounded ${isThumbKept ? 'bg-green-600' : 'bg-red-600'} text-white flex items-center space-x-1`;
+            let tagClass = `text-xs px-1 rounded ${isThumbKept ? 'bg-[#9c539c]' : 'bg-[#c967a2]'} text-[#e8dcf5] flex items-center space-x-1`;
 
             if (isThumbKept) {
-                img.classList.add('border-green-500');
+                img.classList.add('border-[#9c539c]');
             } else {
-                img.classList.add('border-red-500', 'opacity-50');
+                img.classList.add('border-[#c967a2]', 'opacity-50');
             }
 
             if (file === selectedImage) {
-                img.classList.add('!border-indigo-500', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-indigo-400'); // Override
+                img.classList.add('!border-[#d876a9]', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-[#c967a2]'); // Override
             }
             img.onclick = (event) => {
                 event.stopPropagation(); // Prevent event from bubbling up to thumbContainer
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Always show the tag based on decision
             const tag = document.createElement('div');
             tag.className = tagClass;
-            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-cyan-500 rounded-full w-2 h-2"></span>' : ''}`;
+            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2"></span>' : ''}`;
             thumbContainer.appendChild(tag);
 
             // Add an additional click handler to thumbContainer for selection, distinct from preview
@@ -1140,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
-                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
                         } else {
                             magnifiedImageIndexDisplay.textContent = indexText;
                         }
@@ -1155,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
-                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-blue-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
                         } else {
                             magnifiedImageIndexDisplay.textContent = indexText;
                         }
