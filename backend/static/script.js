@@ -143,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let directories = [];
     let selectedDir = null;
+    let dirValidationState = new Map(); // tracks valid/invalid/unknown state per directory
     let currentJobId = null;
     let initialGoReviewEnabled = false;
     let initialScanStatusMessage = '';
@@ -160,6 +161,33 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSortDirection = 'asc'; // New state for sort direction ('asc', 'desc')
 
     // --- Functions ---
+
+    /**
+     * Parses FastAPI validation error response and extracts failed directory paths
+     * @param {Object} errorData - The error response from FastAPI
+     * @returns {Array<string>} - Array of invalid directory paths
+     */
+    function parseValidationErrors(errorData) {
+        const invalidPaths = [];
+
+        if (errorData && Array.isArray(errorData.detail)) {
+            errorData.detail.forEach(error => {
+                // Check if this is a directory validation error
+                if (error.loc && error.loc.includes('directories')) {
+                    // Extract path from error message
+                    const match = error.msg.match(/DirectoryNotFound:(.+)$/);
+                    if (match) {
+                        invalidPaths.push(match[1]);
+                    } else if (error.input) {
+                        // Fallback: use the input field
+                        invalidPaths.push(error.input);
+                    }
+                }
+            });
+        }
+
+        return invalidPaths;
+    }
 
     function getGroupDecisionStatus(group) {
         const keptPaths = decisions.get(group.id) || new Set();
@@ -239,11 +267,49 @@ document.addEventListener('DOMContentLoaded', () => {
         dirList.innerHTML = '';
         directories.forEach(dir => {
             const div = document.createElement('div');
-            div.textContent = dir;
-            div.className = 'p-2 rounded-md cursor-pointer hover:bg-gray-700';
-            if (dir === selectedDir) {
-                div.classList.add('bg-indigo-600', 'text-white');
+            const isValid = dirValidationState.get(dir);
+            const isInvalid = isValid === false; // explicitly false, not undefined
+
+            // Create container with flex layout for icon + text
+            const container = document.createElement('div');
+            container.className = 'flex items-center space-x-2';
+
+            // Add validation icon
+            const icon = document.createElement('span');
+            icon.className = 'flex-shrink-0';
+            if (isValid === true) {
+                // Green checkmark for valid
+                icon.innerHTML = `<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>`;
+            } else if (isInvalid) {
+                // Red X for invalid
+                icon.innerHTML = `<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>`;
             }
+
+            // Add directory text
+            const text = document.createElement('span');
+            text.textContent = dir;
+            text.className = 'flex-grow truncate';
+
+            container.appendChild(icon);
+            container.appendChild(text);
+            div.appendChild(container);
+
+            // Base styling
+            div.className = 'p-2 rounded-md cursor-pointer transition-all duration-200';
+
+            // Apply validation-based styling
+            if (isInvalid) {
+                div.classList.add('bg-red-900', 'border-2', 'border-red-500', 'text-red-100', 'hover:bg-red-800');
+            } else if (dir === selectedDir) {
+                div.classList.add('bg-indigo-600', 'text-white');
+            } else {
+                div.classList.add('hover:bg-gray-700');
+            }
+
             div.onclick = () => {
                 selectedDir = dir;
                 renderDirs();
@@ -272,6 +338,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newDir && !directories.includes(newDir)) {
             directories.push(newDir);
             dirInput.value = '';
+            // Clear validation state for new directory (will be validated on scan)
+            dirValidationState.delete(newDir);
+            hideValidationError(); // Hide error when user makes changes
             renderDirs();
         }
     }
@@ -282,9 +351,53 @@ document.addEventListener('DOMContentLoaded', () => {
             if (primaryDirInput.value === selectedDir) {
                 primaryDirInput.value = '';
             }
+
+            // Remove from validation state
+            dirValidationState.delete(selectedDir);
+
+            // If we removed an invalid directory, check if we should hide error
+            const hasInvalidDirs = directories.some(dir => dirValidationState.get(dir) === false);
+            if (!hasInvalidDirs) {
+                hideValidationError();
+            }
+
             selectedDir = null;
             renderDirs();
         }
+    }
+
+    /**
+     * Shows the validation error alert with specific paths
+     * @param {Array<string>} invalidPaths - Array of invalid directory paths
+     */
+    function showValidationError(invalidPaths) {
+        const alertEl = document.getElementById('validationErrorAlert');
+        const messageEl = document.getElementById('validationErrorMessage');
+
+        if (invalidPaths.length === 1) {
+            messageEl.textContent = `The following directory was not found: "${invalidPaths[0]}"`;
+        } else {
+            messageEl.innerHTML = `The following directories were not found:<ul class="list-disc list-inside mt-2 space-y-1">
+                ${invalidPaths.map(path => `<li class="font-mono text-xs">${path}</li>`).join('')}
+            </ul>`;
+        }
+
+        alertEl.classList.remove('hidden');
+
+        // Scroll to alert
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /**
+     * Hides the validation error alert
+     */
+    function hideValidationError() {
+        const alertEl = document.getElementById('validationErrorAlert');
+        alertEl.classList.add('hidden');
+
+        // Also reset scanStatus styling
+        const scanStatusEl = document.getElementById('scanStatus');
+        scanStatusEl.classList.remove('text-red-400', 'font-semibold');
     }
 
     async function startScan() {
@@ -319,42 +432,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to start scan');
+
+                // Create enhanced error with parsed data
+                const error = new Error(errorData.detail || 'Failed to start scan');
+                error.validationErrors = parseValidationErrors(errorData);
+                error.errorData = errorData;
+                throw error;
             }
 
             const data = await response.json();
             currentJobId = data.job_id;
+
+            // Clear any previous validation errors on success
+            dirValidationState.clear();
+            directories.forEach(dir => dirValidationState.set(dir, true));
+            renderDirs();
+            hideValidationError();
+
             pollStatus(currentJobId);
 
-                } catch (error) {
+        } catch (error) {
+            btnStartScan.disabled = false; // Always re-enable start scan button
+            scanProgress.style.display = 'none'; // Hide progress bar
 
-                    btnStartScan.disabled = false; // Always re-enable start scan button
+            // Handle validation errors
+            if (error.validationErrors && error.validationErrors.length > 0) {
+                // Mark invalid paths
+                error.validationErrors.forEach(path => {
+                    dirValidationState.set(path, false);
+                });
 
-                    scanProgress.style.display = 'none'; // Hide progress bar
-
-        
-
-                    let errorMessage = `Error. Directory not found.`;
-
-                    
-
-                    // If a previous job was loaded, let the user know they can still review it.
-
-                    if (initialGoReviewEnabled) { 
-
-                        btnGoReview.disabled = false; // Ensure Go to Review button is enabled
-
-                        scanStatusEl.textContent = `${errorMessage} You can still ${initialScanStatusMessage.toLowerCase()}.`;
-
-                    } else {
-
-                        // If no previous job was loaded, just display the error.
-
-                        scanStatusEl.textContent = errorMessage;
-
+                // Mark paths that weren't in the error as valid
+                directories.forEach(dir => {
+                    if (!dirValidationState.has(dir) || dirValidationState.get(dir) === undefined) {
+                        dirValidationState.set(dir, true);
                     }
+                });
 
-                }
+                // Re-render directory list with validation indicators
+                renderDirs();
+
+                // Show prominent error alert
+                showValidationError(error.validationErrors);
+
+                // Update status text
+                const pathCount = error.validationErrors.length;
+                const statusMessage = `${pathCount} ${pathCount === 1 ? 'directory' : 'directories'} not found.`;
+                scanStatusEl.textContent = statusMessage;
+                scanStatusEl.classList.add('text-red-400', 'font-semibold');
+            } else {
+                // Generic error (not validation-related)
+                let errorMessage = error.message || 'Error starting scan.';
+                scanStatusEl.textContent = errorMessage;
+                scanStatusEl.classList.add('text-red-400');
+            }
+
+            // If previous job available, allow review
+            if (initialGoReviewEnabled) {
+                btnGoReview.disabled = false;
+                scanStatusEl.textContent += ` You can still ${initialScanStatusMessage.toLowerCase()}.`;
+            }
+        }
     }
 
     async function pollStatus(jobId) {
@@ -900,6 +1038,12 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Please run a scan first.");
         }
     });
+
+    // Dismiss validation error alert
+    const dismissValidationError = document.getElementById('dismissValidationError');
+    if (dismissValidationError) {
+        dismissValidationError.addEventListener('click', hideValidationError);
+    }
 
     btnBackToScanSetup.addEventListener('click', showScanSetupScreen);
 
