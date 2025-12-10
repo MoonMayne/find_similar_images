@@ -1,6 +1,9 @@
 data/
 venv/
 Agents.md
+CLAUDE.md
+.playwright-mcp
+.gemini
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

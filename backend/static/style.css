@@ -1,86 +1,157 @@
 /* ===================================
-   PURPLE/PINK COLOR SYSTEM
+   MODERN GRAY COLOR SYSTEM
+   Image-focused, minimal design
    =================================== */
 :root {
-    /* Primary Purple Palette */
-    --primary-50: #f5f0fa;
-    --primary-100: #ebe0f5;
-    --primary-200: #d7c1eb;
-    --primary-300: #c3a2e1;
-    --primary-400: #af83d7;
-    --primary-500: #9c539c;   /* Base purple */
-    --primary-600: #804595;   /* Deep purple */
-    --primary-700: #6a398c;   /* Deepest purple */
-    --primary-800: #552d70;   /* Very deep purple */
-    --primary-900: #401f54;   /* Darkest purple */
+    /* Backgrounds */
+    --bg-app: #000000;              /* Pure black */
+    --bg-surface: #000000;          /* Pure black (was #121212) */
+    --bg-elevated: #000000;         /* Pure black (was #1e1e1e) */
+    --bg-input: #1a1a1a;            /* Slightly gray for form inputs */
 
-    /* Accent Pink Palette */
-    --accent-50: #fef5f9;
-    --accent-100: #fde8f2;
-    --accent-200: #fbd1e5;
-    --accent-300: #f7a5cc;
-    --accent-400: #e38bb8;
-    --accent-500: #d876a9;    /* Base pink */
-    --accent-600: #c967a2;    /* Purple-pink */
-    --accent-700: #b54d8a;
-    --accent-800: #933c6e;
-    --accent-900: #712b52;
+    /* Borders & Dividers */
+    --border-subtle: #333333;       /* Default borders */
+    --border-strong: #4a4a4a;       /* Active/focused borders */
+    --border-divider: #2a2a2a;      /* Section dividers */
 
-    /* Background Colors */
-    --bg-primary: #000000;     /* Pure black */
-    --bg-secondary: #0f0816;   /* Near-black purple */
-    --bg-tertiary: #1a0f2e;    /* Dark purple-black */
-    --bg-elevated: #251747;    /* Elevated purple */
+    /* Text */
+    --text-primary: #ffffff;        /* Headings, labels */
+    --text-secondary: #b3b3b3;      /* Body text, descriptions */
+    --text-tertiary: #808080;       /* Hints, disabled text */
 
-    /* Text Colors */
-    --text-primary: #e8dcf5;   /* Lavender white */
-    --text-secondary: #c9b8e3; /* Medium lavender */
-    --text-tertiary: #a695c7;  /* Muted lavender */
-    --text-disabled: #7c6ba0;  /* Dim lavender */
+    /* Accent - Primary Action (Teal/Cyan - Modern & Tech-Forward) */
+    --accent-primary: #14b8a6;      /* Teal-500 */
+    --accent-primary-hover: #2dd4bf; /* Teal-400 */
+    --accent-primary-active: #0f766e; /* Teal-700 */
 
-    /* State Colors */
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
+    /* Semantic Colors */
+    --danger: #dc2626;              /* Delete actions */
+    --danger-hover: #ef4444;
+    --warning: #f59e0b;             /* Caution */
+    --warning-hover: #fbbf24;
+    --success: #10b981;             /* Keep actions */
+    --success-hover: #34d399;
+
+    /* Interactive Grays */
+    --gray-button: #2a2a2a;         /* Default button bg */
+    --gray-button-hover: #3a3a3a;   /* Subtle lift on hover */
+    --gray-button-active: #1a1a1a;  /* Pressed state */
 }
 
 /* ===================================
-   GRADIENT CLASSES
+   TYPOGRAPHY
+   =================================== */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+/* ===================================
+   CARDS & SURFACES
    =================================== */
 .gradient-card {
-    background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-elevated) 100%);
-}
-
-.gradient-button-primary {
-    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-500) 100%);
-}
-
-.gradient-button-secondary {
-    background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-500) 100%);
-}
-
-.gradient-button-destructive {
-    background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-500) 100%);
+    background: #000000;
+    border: 1px solid var(--border-subtle);
 }
 
 /* ===================================
-   GLOW EFFECTS
+   BUTTON STYLES
    =================================== */
-.primary-glow-hover:hover {
-    box-shadow: 0 0 15px rgba(156, 83, 156, 0.5),
-                0 0 30px rgba(128, 69, 149, 0.3);
-    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+
+/* Primary Action Button (Start Scan, Finalize) */
+.gradient-button-primary {
+    background: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    color: white;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
-.destructive-glow-hover:hover {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6),
-                0 0 40px rgba(245, 158, 11, 0.3);
-    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+.gradient-button-primary:hover:not(:disabled) {
+    background: var(--accent-primary-hover);
+    border-color: var(--accent-primary-hover);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
 }
 
+.gradient-button-primary:active:not(:disabled) {
+    background: var(--accent-primary-active);
+    border-color: var(--accent-primary-active);
+}
+
+.gradient-button-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Secondary Action Button (Navigate, Keep All, etc.) */
+.gradient-button-secondary {
+    background: var(--gray-button);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.gradient-button-secondary:hover:not(:disabled) {
+    background: var(--gray-button-hover);
+    border-color: var(--border-strong);
+}
+
+.gradient-button-secondary:active:not(:disabled) {
+    background: var(--gray-button-active);
+}
+
+/* Danger Button (Delete, Trash) - Gray at rest, red on hover */
+.gradient-button-destructive {
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.gradient-button-destructive:hover {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.gradient-button-destructive:active {
+    background: rgba(220, 38, 38, 0.2);
+    border-color: var(--danger-hover);
+    color: var(--danger-hover);
+}
+
+/* Success Button (for dynamic toggle state) */
+.gradient-button-success {
+    background: transparent;
+    border: 1px solid var(--success);
+    color: var(--success);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.gradient-button-success:hover {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success-hover);
+    color: var(--success-hover);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Remove old glow hover effects */
+.primary-glow-hover:hover,
+.destructive-glow-hover:hover,
 .accent-glow-hover:hover {
-    box-shadow: 0 0 15px rgba(216, 118, 169, 0.5),
-                0 0 30px rgba(201, 103, 162, 0.3);
-    transition: box-shadow 0.3s ease-in-out, background-color 0.3s ease-in-out;
+    /* Effects now handled by button classes above */
 }
 
 /* ===================================
@@ -89,7 +160,7 @@
 #heroImageContainer {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     flex-grow: 1;
     min-height: 0;
@@ -153,7 +224,7 @@
     border-radius: 20px;
     font-size: 1.1rem;
     z-index: 1001;
-    border: 1px solid var(--primary-700);
+    border: 1px solid var(--border-strong);
 }
 
 /* ===================================
@@ -163,7 +234,7 @@
     width: 8px;
     height: 8px;
     border-radius: 9999px;
-    background-color: var(--accent-500);
+    background-color: var(--accent-primary);
     display: inline-block;
     margin-left: 4px;
     flex-shrink: 0;
@@ -172,7 +243,7 @@
 .suggested-dot.hero-dot {
     width: 12px;
     height: 12px;
-    box-shadow: 0 0 10px rgba(216, 118, 169, 0.7);
+    box-shadow: 0 0 10px rgba(20, 184, 166, 0.5);
 }
 
 /* ===================================
@@ -184,15 +255,87 @@
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--bg-tertiary);
+    background: var(--bg-surface);
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--primary-700);
+    background: var(--border-strong);
     border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-600);
+    background: var(--border-strong);
+    opacity: 0.8;
+}
+
+/* ===================================
+   FORM ELEMENTS
+   =================================== */
+input[type="text"],
+input[type="number"],
+select {
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    transition: border-color 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder {
+    color: var(--text-tertiary);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    accent-color: var(--accent-primary);
+}
+
+/* ===================================
+   TOOLTIPS
+   =================================== */
+.group:hover .group-hover\:block {
+    display: block !important;
+}
+
+/* Tooltip container styling */
+.group .absolute.bottom-full {
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+}
+
+/* ===================================
+   UTILITIES
+   =================================== */
+.border-divider {
+    border-color: var(--border-divider);
+}
+
+.text-primary {
+    color: var(--text-primary);
+}
+
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+.text-tertiary {
+    color: var(--text-tertiary);
+}
+
+.bg-surface {
+    background-color: var(--bg-surface);
+}
+
+.bg-elevated {
+    background-color: var(--bg-elevated);
 }

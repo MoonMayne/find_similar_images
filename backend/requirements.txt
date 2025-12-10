@@ -1,7 +1,7 @@
-fastapi
-uvicorn
-python-multipart
-send2trash
-duplicate-images
-jinja2
-opencv-python
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+send2trash>=1.8.2
+duplicate-images>=1.0.0
+jinja2>=3.1.2
+opencv-python>=4.8.0

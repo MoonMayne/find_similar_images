@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
         if (magnifiedImagePath === selectedGroup.suggested) {
-            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-teal-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
         } else {
             magnifiedImageIndexDisplay.textContent = indexText;
         }
@@ -187,6 +187,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return invalidPaths;
+    }
+
+    /**
+     * Update Remove Selected button visibility based on directory list
+     */
+    function updateRemoveButtonVisibility() {
+        const hasDirectories = directories.length > 0;
+        if (!hasDirectories) {
+            btnRemoveDir.style.display = 'none';
+        } else {
+            btnRemoveDir.style.display = 'inline-flex';
+        }
+    }
+
+    /**
+     * Update Go to Review button visibility based on scan status
+     */
+    function updateGoReviewVisibility() {
+        if (!currentJobId || btnGoReview.disabled) {
+            btnGoReview.style.display = 'none';
+        } else {
+            btnGoReview.style.display = 'inline-flex';
+        }
+    }
+
+    /**
+     * Update Start Scan button state based on directories
+     */
+    function updateStartScanButton() {
+        const hasDirectories = directories.length > 0;
+        btnStartScan.disabled = !hasDirectories;
+
+        if (!hasDirectories) {
+            btnStartScan.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            btnStartScan.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    /**
+     * Update toggle button text based on current image state
+     */
+    function updateToggleButtonText() {
+        if (!selectedImage || !selectedGroup) {
+            actToggleKeep.textContent = 'Toggle State (K)';
+            actToggleKeep.className = 'gradient-button-secondary text-white font-medium py-1 px-3 rounded-md text-sm';
+            return;
+        }
+
+        const keptPaths = decisions.get(selectedGroup.id) || new Set();
+        const isKept = keptPaths.has(selectedImage);
+
+        if (isKept) {
+            actToggleKeep.textContent = 'Mark to Delete (K)';
+            actToggleKeep.className = 'gradient-button-destructive text-gray-300 font-medium py-1 px-3 rounded-md text-sm';
+        } else {
+            actToggleKeep.textContent = 'Mark to Keep (K)';
+            actToggleKeep.className = 'gradient-button-success text-white font-medium py-1 px-3 rounded-md text-sm';
+        }
     }
 
     function getGroupDecisionStatus(group) {
@@ -279,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             icon.className = 'flex-shrink-0';
             if (isValid === true) {
                 // Purple checkmark for valid
-                icon.innerHTML = `<svg class="w-5 h-5 text-[#9c539c]" fill="currentColor" viewBox="0 0 20 20">
+                icon.innerHTML = `<svg class="w-5 h-5 text-[#14b8a6]" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>`;
             } else if (isInvalid) {
@@ -299,15 +358,15 @@ document.addEventListener('DOMContentLoaded', () => {
             div.appendChild(container);
 
             // Base styling
-            div.className = 'p-2 rounded-md cursor-pointer transition-all duration-200';
+            div.className = 'p-2 rounded-md cursor-pointer mb-2 transition-colors duration-150';
 
             // Apply validation-based styling
             if (isInvalid) {
-                div.classList.add('bg-[#401f54]', 'border-2', 'border-[#ef4444]', 'text-[#e8dcf5]', 'hover:bg-[#552d70]');
+                div.classList.add('bg-red-900', 'border-2', 'border-red-500', 'text-white', 'hover:bg-red-800');
             } else if (dir === selectedDir) {
-                div.classList.add('bg-[#804595]', 'text-[#e8dcf5]');
+                div.classList.add('bg-gray-700', 'text-white');
             } else {
-                div.classList.add('hover:bg-[#1a0f2e]');
+                div.classList.add('hover:bg-gray-700');
             }
 
             div.onclick = () => {
@@ -342,6 +401,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dirValidationState.delete(newDir);
             hideValidationError(); // Hide error when user makes changes
             renderDirs();
+            updateRemoveButtonVisibility();
+            updateStartScanButton();
         }
     }
 
@@ -363,6 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             selectedDir = null;
             renderDirs();
+            updateRemoveButtonVisibility();
+            updateStartScanButton();
         }
     }
 
@@ -534,6 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnGoReview.disabled = false;
                 btnStartScan.disabled = false;
                 scanProgressFill.classList.remove('transition-all'); // Remove transition after completion
+                updateGoReviewVisibility(); // Show Go to Review button
             } else { // failed
                 scanStatusEl.textContent = `Scan failed: ${data.message}`;
                 btnStartScan.disabled = false;
@@ -549,12 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function showScanSetupScreen() {
         screenReview.style.display = 'none';
         screenScanSetup.style.display = 'block';
-        // Optionally clear any review state if necessary, but typically a fresh scan setup is desired.
+        document.querySelector('header').style.display = 'block'; // Show header on Scan Setup
     }
 
     function showReviewScreen() {
         screenScanSetup.style.display = 'none';
         screenReview.style.display = 'block';
+        document.querySelector('header').style.display = 'none'; // Hide header on Review
         loadGroups();
     }
 
@@ -611,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (decisionStatus === 'kept') {
                 statusText = `<span class="text-[#9c539c]">All Kept</span>`;
             } else if (decisionStatus === 'mixed') {
-                statusText = `<span class="text-[#d876a9]">Mixed</span>`;
+                statusText = `<span class="text-teal-400">Mixed</span>`;
             }
 
 
@@ -628,19 +693,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                             </svg>` : ''}
                         </div>
-                        <div class="text-sm text-[#a695c7] flex items-center space-x-1">
-                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-[#c967a2]' : 'bg-[#9c539c]'} text-[#e8dcf5] px-2 py-0.5 rounded-full text-xs">
+                        <div class="text-sm text-gray-400 flex items-center space-x-1">
+                            <span class="decision-tag ${decisionStatus === 'deleted' ? 'bg-red-600' : 'bg-green-600'} text-white px-2 py-0.5 rounded-full text-xs">
                                 ${decisionStatus === 'deleted' ? 'Deleted' : 'Kept'}
                             </span>
-                            ${isGroupSuggested ? '<span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2"></span>' : ''}
+                            ${isGroupSuggested ? '<span class="suggested-dot bg-teal-500 rounded-full w-2 h-2"></span>' : ''}
                         </div>
                     </div>
                 </div>
             `;
-            div.className = 'p-3 rounded-md cursor-pointer hover:bg-[#552d70]';
+            div.className = 'p-3 rounded-md cursor-pointer hover:bg-gray-800';
 
             if (selectedGroup && group.id === selectedGroup.id) {
-                div.classList.add('bg-[#804595]', 'text-[#e8dcf5]');
+                div.classList.add('bg-gray-700', 'text-white');
             }
             div.onclick = () => {
                 selectedGroup = group;
@@ -659,7 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         heroImageContainer.innerHTML = ''; // Clear existing content
 
         if (!selectedGroup) {
-            heroImageContainer.innerHTML = '<div class="text-center text-[#a695c7]">No group selected.</div>';
+            heroImageContainer.innerHTML = '<div class="text-center text-gray-400">No group selected.</div>';
             return;
         }
 
@@ -672,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add suggested dot for hero image if applicable
         if (selectedImage === selectedGroup.suggested) {
             const suggestedDot = document.createElement('span');
-            suggestedDot.className = 'suggested-dot hero-dot bg-[#d876a9] rounded-full w-3 h-3 absolute top-2 right-2'; // Position as needed
+            suggestedDot.className = 'suggested-dot hero-dot bg-teal-500 rounded-full w-3 h-3 absolute top-2 right-2'; // Position as needed
             heroImageContainer.appendChild(suggestedDot);
         }
 
@@ -698,25 +763,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const imgContainer = document.createElement('div');
                 // Use custom class for styling and flex properties
-                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-[#251747]';
+                imgContainer.className = 'side-by-side-img-container flex flex-col items-center h-full p-2 rounded-md bg-black border border-gray-700';
 
                 const img = document.createElement('img');
                 img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(file)}&max_size=1024`;
                 img.alt = file;
-                img.className = 'w-full h-full object-contain rounded-md bg-[#1a0f2e]'; // object-contain for vertical fitting
+                img.className = 'w-full h-full object-contain rounded-md bg-transparent'; // object-contain for vertical fitting
 
                 const imgLabel = document.createElement('div');
                 let labelText = file.split('/').pop(); // Display just the filename
                 if (isCurrentFileSelected) {
                     labelText = `(Selected) ${labelText}`;
-                    imgLabel.classList.add('text-[#d876a9]', 'font-bold');
+                    imgLabel.classList.add('text-teal-400', 'font-bold');
                 }
                 if (isCurrentFileSuggested) {
                     labelText = `(Suggested) ${labelText}`;
-                    imgLabel.classList.add('text-[#d876a9]', 'font-bold');
+                    imgLabel.classList.add('text-teal-400', 'font-bold');
                 }
                 imgLabel.textContent = labelText;
-                imgLabel.className += ' text-sm text-[#a695c7] mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
+                imgLabel.className += ' text-sm text-gray-400 mt-2 overflow-hidden whitespace-nowrap overflow-ellipsis max-w-full';
 
 
                 imgContainer.appendChild(img);
@@ -732,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
             img.id = 'heroImg';
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
             img.alt = 'Selected image';
-            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-[#1a0f2e]';
+            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-transparent';
             heroImageContainer.appendChild(img);
             
             let heroText = selectedImage;
@@ -757,16 +822,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const isThumbSuggested = file === selectedGroup.suggested;
 
             let tagText = isThumbKept ? 'Kept' : 'Deleted';
-            let tagClass = `text-xs px-1 rounded ${isThumbKept ? 'bg-[#9c539c]' : 'bg-[#c967a2]'} text-[#e8dcf5] flex items-center space-x-1`;
+            let tagClass = `text-xs px-1 rounded ${isThumbKept ? 'bg-green-600' : 'bg-red-600'} text-white flex items-center space-x-1`;
 
             if (isThumbKept) {
-                img.classList.add('border-[#9c539c]');
+                img.classList.add('border-teal-500');
             } else {
-                img.classList.add('border-[#c967a2]', 'opacity-50');
+                img.classList.add('border-gray-500', 'opacity-50');
             }
 
             if (file === selectedImage) {
-                img.classList.add('!border-[#d876a9]', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-[#c967a2]'); // Override
+                img.classList.add('!border-teal-400', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-gray-500'); // Override
             }
             img.onclick = (event) => {
                 event.stopPropagation(); // Prevent event from bubbling up to thumbContainer
@@ -777,18 +842,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Always show the tag based on decision
             const tag = document.createElement('div');
             tag.className = tagClass;
-            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2"></span>' : ''}`;
+            tag.innerHTML = `<span>${tagText}</span>${isThumbSuggested ? '<span class="suggested-dot bg-teal-500 rounded-full w-2 h-2"></span>' : ''}`;
             thumbContainer.appendChild(tag);
 
             // Add an additional click handler to thumbContainer for selection, distinct from preview
             thumbContainer.addEventListener('click', () => {
                 selectedImage = file;
-                renderSelectedGroup();
+                renderSelectedGroup(); // This will call updateToggleButtonText()
             });
 
             thumbRow.appendChild(thumbContainer);
         });
         updateGroupNavigationButtons(); // Call here
+        updateToggleButtonText(); // Update toggle button text based on selected image state
     }
 
     function toggleKeepSelected() {
@@ -805,6 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePendingActions();
         renderGroupList();
         renderSelectedGroup(); // Re-render to update visual indicators
+        updateToggleButtonText(); // Update button text to reflect new state
     }
 
     function keepAll() {
@@ -1140,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
-                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-teal-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
                         } else {
                             magnifiedImageIndexDisplay.textContent = indexText;
                         }
@@ -1155,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         originalImageSrc.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(magnifiedImagePath)}&max_size=2048`; // Use thumbnail as fallback
                         let indexText = `${magnifiedImageIndex + 1}/${selectedGroup.files.length}`;
                         if (magnifiedImagePath === selectedGroup.suggested) {
-                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-[#d876a9] rounded-full w-2 h-2 ml-1 inline-block"></span>`;
+                            magnifiedImageIndexDisplay.innerHTML = `${indexText} <span class="suggested-dot bg-teal-500 rounded-full w-2 h-2 ml-1 inline-block"></span>`;
                         } else {
                             magnifiedImageIndexDisplay.textContent = indexText;
                         }
@@ -1261,12 +1328,17 @@ document.addEventListener('DOMContentLoaded', () => {
             currentJobId = job.job_id;
             btnGoReview.disabled = false;
             scanStatusEl.textContent = `Scan loaded. Click 'Go to Review'.`;
-            
+
             // Capture initial state here
             initialGoReviewEnabled = !btnGoReview.disabled; // True if button is enabled
             initialScanStatusMessage = scanStatusEl.textContent;
         }
         // Also update primaryDirInput from the loaded job
         // For now, assume primaryDirInput is not managed by job load
+
+        // Update button visibility based on initial state
+        updateRemoveButtonVisibility();
+        updateGoReviewVisibility();
+        updateStartScanButton();
     });
 });
