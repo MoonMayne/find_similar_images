@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalizeMessage = document.getElementById('finalizeMessage');
     const unreviewedWarning = document.getElementById('unreviewedWarning');
     const optCancelFinalize = document.getElementById('optCancelFinalize');
-    const optContinueReview = document.getElementById('optContinueReview');
     const optApplyDecision = document.getElementById('optApplyDecision');
 
     // Image Preview Modal Elements
@@ -1399,10 +1398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         finalizeModal.style.display = 'none';
     });
 
-    optContinueReview.addEventListener('click', () => {
-        finalizeModal.style.display = 'none';
-    });
-
     optApplyDecision.addEventListener('click', applyFinalizeActions);
 
     // Keyboard shortcuts for finalize modal
@@ -1417,8 +1412,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 break;
             case 'Escape':
-                // Cancel on Escape (Continue Reviewing)
-                document.getElementById('optContinueReview').click();
+                // Cancel on Escape
+                finalizeModal.style.display = 'none';
                 e.preventDefault();
                 break;
         }
