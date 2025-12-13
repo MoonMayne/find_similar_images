@@ -946,11 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file === selectedImage) {
                 img.classList.add('!border-teal-400', '!opacity-100', '!transform', '!scale-105', '!shadow-lg', '!ring-2', '!ring-gray-500'); // Override
             }
-            img.onclick = (event) => {
-                event.stopPropagation(); // Prevent event from bubbling up to thumbContainer
-                openImagePreview(file);
-            };
-            
+
             thumbContainer.appendChild(img);
             // Always show the tag based on decision
             const tag = document.createElement('div');
@@ -1430,6 +1426,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('keydown', (e) => {
         if (screenReview.style.display !== 'block') return;
+
+        // Don't process review shortcuts if any modal is open
+        if (finalizeModal.style.display === 'flex') return;
+        if (imagePreviewModal.style.display === 'flex') return;
+        if (shortcutsModal.style.display === 'flex') return;
 
         let handled = false;
         
