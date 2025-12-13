@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Similar Images</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-black text-white">
+
+    <div class="container mx-auto px-8 pt-8 pb-2">
+        <header class="text-center mb-6">
+            <h1 class="text-2xl font-semibold text-white">Find Similar Images</h1>
+            <p class="text-sm text-gray-400">Scan directories to find and manage duplicate images</p>
+        </header>
+
+        <!-- Scan Setup Screen -->
+        <main id="screen-scan-setup">
+            <div class="gradient-card p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-6 text-white">Scan Setup</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <!-- Left Column: Directories -->
+                    <div>
+                        <div class="flex items-center mb-2">
+                            <label for="dirInput" class="block text-sm font-medium text-gray-300">Image Directories</label>
+                            <div class="group relative ml-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                                <div class="absolute bottom-full z-10 mb-2 hidden w-64 rounded-md bg-elevated p-2 text-xs text-white group-hover:block border border-gray-600">
+                                    Add one or more directories to scan for similar images. The app will search these folders recursively.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <input type="text" id="dirInput" placeholder="/path/to/your/images" class="flex-grow rounded-md shadow-sm py-2 px-3 placeholder-gray-500">
+                            <button id="btnAddDir" class="gradient-button-primary text-white font-medium py-2 px-4 rounded-md">Add</button>
+                        </div>
+                        <div id="dirList" class="bg-black border border-gray-700 rounded-md p-3 min-h-[150px] max-h-64 overflow-y-auto">
+                            <!-- Directory items will be injected here -->
+                        </div>
+                        <button id="btnRemoveDir" class="mt-3 gradient-button-destructive text-gray-300 font-medium py-2 px-4 rounded-md">Remove Selected</button>
+                    </div>
+
+                    <!-- Middle Column: Required Options -->
+                    <div>
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex items-center">
+                                    <label for="algorithm" class="block text-sm font-medium text-gray-300">Algorithm</label>
+                                    <div class="group relative ml-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="absolute bottom-full z-10 mb-2 hidden w-72 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
+                                            The algorithm for detecting similar images. <strong>Perceptual Hash (phash)</strong> is recommended for beginners as it's great for finding visually similar images even if they are different sizes or have minor edits. Other hashes might be faster but less accurate.
+                                        </div>
+                                    </div>
+                                </div>
+                                <select id="algorithm" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none ">
+                                    <option value="phash" selected>Perceptual Hash (phash)</option>
+                                    <option value="ahash">Average Hash (ahash)</option>
+                                    <option value="dhash">Difference Hash (dhash)</option>
+                                    <option value="dhash_vertical">Vertical Difference Hash</option>
+                                    <option value="phash_simple">Simple Perceptual Hash</option>
+                                    <option value="whash">Wavelet Hash (whash)</option>
+                                    <option value="colorhash">Color Hash</option>
+                                    <option value="crop_resistant">Crop Resistant Hash</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center">
+                                    <label for="hashSize" class="block text-sm font-medium text-gray-300">Hash Size</label>
+                                    <div class="group relative ml-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="absolute bottom-full z-10 mb-2 hidden w-64 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
+                                            Controls the sensitivity of the algorithm. Higher values are stricter and will find more subtle differences. The default of 8 is a good starting point.
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 mb-2">Higher values are stricter. For whash, must be power of 2.</p>
+                                <input type="number" id="hashSize" value="8" min="2" max="64" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none ">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Advanced Settings -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-300 mb-4">Advanced Settings</h3>
+                        <div id="advancedOptions" class="space-y-6">
+                            <div>
+                                <div class="flex items-center">
+                                    <label for="workers" class="block text-sm font-medium text-gray-300">Number of Workers</label>
+                                    <div class="group relative ml-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="absolute bottom-full z-10 mb-2 hidden w-64 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
+                                            Number of parallel threads for hashing. Leave empty to use all available CPU cores, which is best for most users.
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 mb-2">Defaults to CPU count if empty.</p>
+                                <input type="number" id="workers" min="1" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none ">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="enableSharpnessCheck" class="h-4 w-4 text-[#9c539c] focus:ring-[#9c539c] border-gray-700 rounded">
+                                <div class="flex items-center ml-2">
+                                <label for="enableSharpnessCheck" class="block text-sm text-gray-300">Enable sharpness check</label>
+                                    <div class="group relative ml-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="absolute bottom-full z-10 mb-2 hidden w-72 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
+                                            When enabled, the app will analyze image sharpness (focus) and suggest keeping the sharpest image in a group of duplicates. This is useful for photographers.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="mt-8 border-t border-gray-700 pt-6 flex items-center justify-between">
+                    <div>
+                        <button id="btnStartScan" class="gradient-button-primary text-white font-medium py-2 px-6 rounded-md">Start Scan</button>
+                        <button id="btnStopScan" class="ml-4 gradient-button-destructive text-white font-medium py-2 px-6 rounded-md" style="display: none;">Stop Scan</button>
+                        <button id="btnGoReview" class="ml-4 gradient-button-secondary text-white font-medium py-2 px-6 rounded-md" disabled>Go to Review</button>
+                    </div>
+                    <div id="scanStatus" class="text-sm text-gray-500"></div>
+                </div>
+                <div id="validationErrorAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-[#ef4444] text-white rounded-md shadow-lg">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-lg">Directory Validation Failed</h4>
+                            <p id="validationErrorMessage" class="mt-1 text-sm text-gray-300"></p>
+                        </div>
+                        <button id="dismissValidationError" class="ml-4 text-[#c967a2] hover:text-gray-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="noDuplicatesAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-[#14b8a6] text-white rounded-md shadow-lg">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 flex-shrink-0 text-[#14b8a6]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-lg">Scan Complete</h4>
+                            <p class="mt-1 text-sm text-gray-300">No duplicate images found in the scanned directories.</p>
+                        </div>
+                        <button id="dismissNoDuplicatesAlert" class="ml-4 text-[#14b8a6] hover:text-gray-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="stoppingScanAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-orange-500 text-white rounded-md shadow-lg">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 flex-shrink-0 text-orange-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-lg">Stopping Scan</h4>
+                            <p class="mt-1 text-sm text-gray-300">Please wait while the scan is safely cancelled...</p>
+                        </div>
+                    </div>
+                </div>
+                 <div class="w-full bg-black rounded-full h-7 mt-4 border border-gray-700" id="scanProgress" style="display:none;">
+                    <div id="scanProgressFill" class="bg-teal-500 h-7 rounded-full relative flex items-center justify-center">
+                        <span id="scanProgressText" class="text-sm font-semibold text-black absolute"></span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Review Screen (hidden by default) -->
+        <section id="screen-review" style="display: none;" class="gradient-card pt-2 px-6 pb-6 rounded-lg shadow-lg">
+            <div class="flex items-center justify-between py-2 mb-4 border-b border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <span class="text-xs text-gray-500 font-medium tracking-wide">FSI</span>
+                    <button id="btnBackToScanSetup" class="bg-gray-800 hover:bg-gray-700 text-white font-medium py-1 px-3 rounded-md text-sm border border-gray-700">← Back</button>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- <span class="text-sm font-medium text-white">Review Duplicates</span> -->
+                    <!-- <button id="btnShortcuts" class="text-xs text-gray-400 hover:text-gray-300">[?]</button> -->
+                </div>
+                <label class="inline-flex items-center cursor-pointer">
+                    <input type="checkbox" value="" id="sideBySideToggle" class="sr-only peer">
+                    <div class="relative w-11 h-6 bg-black peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                    <span class="ms-3 text-sm font-medium text-white py-1 px-3">Side-by-Side</span>
+                    <button id="btnShortcuts" class="text-xs text-gray-400 hover:text-gray-300">[?]</button>
+
+                </label>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Left Column: Group List -->
+                <div class="lg:col-span-1">
+                    <div class="mb-4 space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <label for="groupFilter" class="text-sm font-medium text-gray-300">Filter:</label>
+                            <select id="groupFilter" class="flex-grow bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-1 px-2 focus:outline-none ">
+                                <option value="all">All</option>
+                                <option value="reviewed">Reviewed</option>
+                                <option value="unreviewed">Unreviewed</option>
+                                <option value="kept">All Kept</option>
+                                <option value="deleted">All Deleted</option>
+                                <option value="mixed">Mixed</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label for="groupSort" class="text-sm font-medium text-gray-300">Sort By:</label>
+                            <select id="groupSort" class="flex-grow bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-1 px-2 focus:outline-none ">
+                                <option value="id">Group ID</option>
+                                <option value="image_count">Image Count</option>
+                                <option value="decision_status">Decision Status</option>
+                            </select>
+                            <button id="groupSortDirection" class="bg-gray-800 hover:bg-black text-white font-medium py-1 px-2 rounded-md transition duration-300 border border-gray-700">
+                                <!-- Up/Down arrow icon -->
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-black border border-gray-700 rounded-md p-3 max-h-[70vh] overflow-y-auto" id="groupList">
+                        <!-- Group items will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Image Preview and Actions -->
+                <div class="lg:col-span-3">
+                    <div class="bg-black rounded-lg shadow-inner p-4 h-[70vh] flex flex-col border border-gray-700">
+                        <!-- Image viewing area with constrained height -->
+                        <div class="relative flex-grow min-h-0" id="heroImageContainer">
+                            <!-- Images will be injected here -->
+                        </div>
+
+                        <!-- Fixed metadata bar (always visible, never overlapped) -->
+                        <div id="heroMetadataBar" class="flex-shrink-0 border-t border-gray-700 pt-2 mt-2 min-h-[3rem]">
+                            <!-- File path and stats text will be injected here -->
+                        </div>
+
+                        <!-- Thumbnail row -->
+                        <div id="thumbRow" class="flex items-center space-x-4 overflow-x-auto pb-2 flex-shrink-0 border-t border-gray-700 pt-2 mt-2">
+                            <!-- Thumbnails will be injected here -->
+                        </div>
+                    </div>
+                     <div class="mt-4 border-t border-gray-700 pt-2 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <!-- Safe actions grouped left -->
+                            <div class="flex space-x-2">
+                                <button id="actToggleKeep" class="gradient-button-secondary text-white font-medium py-1 px-3 rounded-md text-sm">Toggle Keep (K)</button>
+                                <button id="actKeepAll" class="gradient-button-secondary text-white font-medium py-1 px-3 rounded-md text-sm">Keep All</button>
+                            </div>
+                            <!-- Danger actions grouped right with extra spacing -->
+                            <div class="flex space-x-2 ml-8">
+                                <button id="actDeleteAll" class="gradient-button-destructive text-gray-300 font-medium py-1 px-3 rounded-md text-sm">Delete All (D)</button>
+                                <button id="actTrashNonSuggested" class="gradient-button-destructive text-gray-300 font-medium py-1 px-3 rounded-md text-sm">Trash Others (O)</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span id="pendingText" class="text-sm text-gray-500 mr-4"></span>
+                            <button id="btnPrevGroup" class="gradient-button-secondary text-white font-medium py-1 px-3 rounded-md mr-2 text-sm">Previous (↑)</button>
+                            <button id="btnNextGroup" class="gradient-button-secondary text-white font-medium py-1 px-3 rounded-md mr-4 text-sm">Next (↓)</button>
+                            <button id="btnFinalize" class="gradient-button-primary text-white font-medium py-1 px-4 rounded-md">Finalize</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- Finalize Modal -->
+            <div id="finalizeModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" style="display: none;">
+                <div class="gradient-card border border-gray-700 p-8 rounded-lg shadow-2xl w-full max-w-2xl">
+                    <h3 class="text-2xl font-medium text-white mb-6">Finalize Actions</h3>
+
+                    <!-- Progress Info -->
+                    <p id="finalizeMessage" class="text-gray-300 mb-4"></p>
+                    <p id="unreviewedWarning" class="text-yellow-400 mb-6" style="display: none;">
+                        ⚠️ You have unreviewed groups. Choose how to handle them:
+                    </p>
+
+                    <!-- Trash Settings Section -->
+                    <div class="mb-6 pb-6 border-b border-gray-700">
+                        <h4 class="text-lg font-medium text-white mb-3">Trash Destination</h4>
+                        <div class="space-y-2">
+                            <!-- System Trash (Default) -->
+                            <label class="flex items-start cursor-pointer group">
+                                <input type="radio" name="trashDestination" value="system" checked
+                                       class="mt-1 accent-teal-500" id="trashSystem">
+                                <div class="ml-3">
+                                    <span class="text-white font-medium">System Trash</span>
+                                    <span class="text-gray-400 text-sm ml-2">(Recommended)</span>
+                                </div>
+                            </label>
+
+                            <!-- Custom Path -->
+                            <label class="flex items-start cursor-pointer group">
+                                <input type="radio" name="trashDestination" value="custom"
+                                       class="mt-1 accent-teal-500" id="trashCustom">
+                                <div class="ml-3 flex-1">
+                                    <span class="text-white font-medium">Custom Path</span>
+                                    <input type="text" id="customTrashPath" placeholder="/path/to/trash"
+                                           class="mt-2 block w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 text-sm"
+                                           disabled>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Selection Section -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium text-white mb-3">Action (select one)</h4>
+                        <div class="space-y-4">
+
+                            <!-- Option 1: Keep My Decisions -->
+                            <label class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group">
+                                <input type="radio" name="finalizeAction" value="apply_decisions" checked
+                                       class="mt-1 accent-teal-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep My Decisions & Trash Others</div>
+                                    <div class="text-gray-400 text-sm mt-1">
+                                        Keeps the images you've selected to keep.<br>
+                                        <span class="text-gray-500">Unreviewed groups: Keeps suggested image by default.</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Option 2: Keep All Suggested -->
+                            <label class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group">
+                                <input type="radio" name="finalizeAction" value="keep_suggested"
+                                       class="mt-1 accent-teal-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep All Suggested</div>
+                                    <div class="text-gray-400 text-sm mt-1">
+                                        Disregard your selections and ONLY keep suggested image per group.<br>
+                                        <span class="text-gray-500">All non-suggested images will be trashed.</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Option 3: Keep All in Primary Directory (conditional) -->
+                            <label id="primaryDirOption" class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group" style="display: none;">
+                                <input type="radio" name="finalizeAction" value="keep_primary"
+                                       class="mt-1 accent-teal-500" id="radioPrimary">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep All in Primary Directory</div>
+                                    <div class="text-gray-400 text-sm mt-1 mb-3">
+                                        <strong class="text-teal-400">Reviewed groups:</strong> Your decisions apply.<br>
+                                        <strong class="text-teal-400">Unreviewed groups:</strong> ALL files from primary directory are kept.
+                                    </div>
+
+                                    <!-- Nested Primary Directory Selection -->
+                                    <div id="primaryDirControls" class="mt-3 pl-4 border-l-2 border-teal-500" style="display: none;">
+                                        <label class="text-white text-sm font-medium mb-2 block">
+                                            Select Primary Directory:
+                                        </label>
+                                        <select id="primaryDirDropdown"
+                                                class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2">
+                                            <option value="">-- Select Directory --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                        <button id="optCancelFinalize" class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">
+                            Cancel
+                        </button>
+                        <button id="optApplyDecision" class="gradient-button-primary text-white font-medium py-3 px-6 rounded-md">
+                            Apply Decision
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Preview Modal -->
+            <div id="imagePreviewModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" style="display: none;">
+                <div class="gradient-card border border-gray-700 p-4 rounded-lg shadow-2xl relative max-w-4xl max-h-[90vh]">
+                    <button id="imagePreviewClose" class="absolute top-2 right-2 gradient-button-secondary text-white font-medium py-1 px-3 rounded-full text-sm">X</button>
+                    <img id="imagePreviewSrc" src="" alt="Image Preview" class="max-w-full max-h-[80vh] object-contain mx-auto">
+                </div>
+            </div>
+            
+            <!-- Keyboard Shortcuts Modal -->
+            <div id="shortcutsModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" style="display: none;">
+                <div class="gradient-card border border-gray-700 p-8 rounded-lg shadow-2xl w-full max-w-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-medium text-white">Keyboard Shortcuts</h3>
+                        <button id="btnShortcutsClose" class="text-gray-500 hover:text-white">&times;</button>
+                    </div>
+                    <div class="space-y-4 text-gray-300">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">K</div>
+                            <div>Toggle 'Keep' / 'Delete' for the selected image.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">D</div>
+                            <div>Mark all images in the current group for deletion.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">O</div>
+                            <div>Keep the 'Suggested' image and mark all others for deletion.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">P</div>
+                            <div>Keep only the currently selected image and mark others for deletion.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">↑ / ↓</div>
+                            <div>Navigate to the previous or next group.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">← / →</div>
+                            <div>Select the previous or next image in the thumbnail row.</div>
+
+                            <div class="font-mono bg-gray-800 border border-gray-700 px-2 py-1 rounded">Z (Hold)</div>
+                            <div>Magnify the currently selected image.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- Original Image Viewer Modal (for Magnify Mode) -->
+    <div id="originalImageViewerModal" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50" style="display: none;">
+                <img id="originalImageSrc" src="" alt="Magnified Image" class="max-w-full max-h-full object-contain">
+        <div id="magnifiedImageIndexDisplay" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white border border-gray-700 text-lg px-4 py-2 rounded-full z-50"></div>
+
+    </div>
+
+    <script src="/static/script.js?v=9"></script>
+</body>
+</html>
