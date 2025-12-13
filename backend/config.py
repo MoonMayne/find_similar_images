@@ -11,7 +11,6 @@ def env_path(name: str, default: str | None = None) -> Path | None:
 
 TRASH_DIR = env_path("TRASH_DIR")
 HASH_DB = env_path("HASH_DB", "data/hash_cache.json")
-DEFAULT_THRESHOLD = int(os.environ.get("SIMILARITY_THRESHOLD", "0"))
 DEFAULT_WORKERS = int(os.environ.get("WORKERS", "0")) or None
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)

@@ -42,7 +42,7 @@ python -m backend.app
 ![Scan Setup](./screenshots/setup_screen.png)
 
 ### Review Interface
-![Review Interface](./screenshots/review_screen/.png)
+![Review Interface](./screenshots/review_screen.png)
 
 ---
 
@@ -62,7 +62,7 @@ python -m backend.app
 
 ## System Requirements
 
-- Python 3.8 or higher
+- Python 3.8 or higher (tested on 3.14)
 - macOS, Linux, or Windows
 - 512MB RAM minimum
 - Modern web browser (Chrome, Firefox, Safari, Edge)
@@ -71,24 +71,38 @@ python -m backend.app
 
 ## Configuration
 
-### Environment Variables
+### UI Controls (Adjustable Per Scan)
+
+These settings can be adjusted in the web interface for each scan:
+
+- **Algorithm** - Choose from 8 hash algorithms (phash, ahash, dhash, etc.)
+- **Hash Size** - **THE ONLY similarity control** (2-64, default 8)
+  - **Lower values** (e.g., 4-6) = more lenient matching (groups more images together, including less similar ones)
+  - **Higher values** (e.g., 16-32) = stricter matching (only groups very similar images)
+- **Workers** - Number of parallel hashing threads (defaults to CPU cores)
+- **Trash Directory** - Custom location for deleted files (defaults to system trash)
+- **Sharpness Check** - Enable intelligent keeper suggestions based on image sharpness
+
+### Environment Variables (Set Before Starting App)
+
+These are system-level settings that require restarting the app to change:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TRASH_DIR` | System trash | Custom trash directory path |
 | `HASH_DB` | `data/hash_cache.json` | Hash cache file location |
 | `DB_PATH` | `data/app.db` | SQLite database path |
-| `SIMILARITY_THRESHOLD` | `0` | Hamming distance threshold (0 = exact match) |
-| `WORKERS` | CPU cores | Number of parallel hashing threads |
 | `THUMBNAIL_MAX_SIZE` | `640` | Maximum thumbnail dimension in pixels |
 
 ### Example Usage
 
 ```bash
-export TRASH_DIR=/path/to/custom/trash
-export WORKERS=4
+# Set environment variables (optional - most settings are in UI)
+export HASH_DB=/custom/path/hash_cache.json
+export THUMBNAIL_MAX_SIZE=1024
 python -m backend.app
 ```
+
+**Note:** Settings like algorithm, hash size, workers, and trash directory are set in the UI per scan, so environment variables are only needed for system-level defaults.
 
 ---
 
@@ -109,8 +123,10 @@ python -m backend.app
 
 - **Range:** 2-64
 - **Default:** 8
-- **Higher values** = more sensitive (finds subtle differences)
-- **Lower values** = more lenient (groups more images together)
+- **Higher values** = stricter matching (finds subtle differences, creates smaller groups)
+- **Lower values** = more lenient matching (groups more images together, creates larger groups)
+
+**Important:** This app uses `--group` mode to show ALL duplicates in a group (not just pairs). The `max_distance` parameter (similarity threshold) is incompatible with group mode, so **hash size is the ONLY way to tune similarity**.
 
 ---
 
@@ -125,6 +141,7 @@ python -m backend.app
 | `↑` / `↓` | Navigate between groups |
 | `←` / `→` | Select previous/next image in group |
 | `Z` (hold) | Magnify current image |
+| `?` | Show shortcuts help dialog |
 
 ---
 
@@ -183,10 +200,11 @@ GET    /api/thumbnail              - Get cached thumbnail
 - Check console for error messages
 
 ### Images not grouping together
-- Try adjusting hash size (e.g., 16 or 32)
-    - lower hash will increase diversity of groups (less similar images) while higher hash will decrease group diversity (more similar images)
-- Use `crop_resistant` algorithm for cropped images
-- Adjust similarity threshold (higher = more lenient)
+- Try adjusting **hash size** in the scan setup:
+  - **Increase hash size** (e.g., 16 or 32) if you want STRICTER matching (only very similar images)
+  - **Decrease hash size** (e.g., 4 or 6) if you want MORE LENIENT matching (groups more images)
+- Use `crop_resistant` algorithm for cropped or resized images
+- Try different algorithms - some work better for specific image types
 
 ### Slow scanning
 - Reduce number of workers if CPU usage is too high
@@ -194,8 +212,7 @@ GET    /api/thumbnail              - Get cached thumbnail
 
 ### Virtual environment issues
 - Make sure you activated the venv: `source venv/bin/activate`
-- Verify Python version: `python --version` (3.8+)
-    - Tested on 3.14
+- Verify Python version: `python --version` (3.8+, tested on 3.14)
 - Reinstall dependencies: `pip install -r backend/requirements.txt`
 
 ---
@@ -207,39 +224,20 @@ GET    /api/thumbnail              - Get cached thumbnail
 - **Backend:** FastAPI + SQLite
 - **Frontend:** Vanilla JavaScript + Tailwind CSS
 - **Hashing:** duplicate-images library
-- **Image Processing:** OpenCV, whatever `duplicate-images` uses
-
-### Running Tests
-
-```bash
-# Currently no test suite configured
-# See tests/ directory for future implementation
-```
-
-### Contributing
-
-Contributions welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for technical details.
+- **Image Processing:** OpenCV
 
 ---
 
 ## Dependencies
 
 ```
-fastapi           # Web framework
-uvicorn           # ASGI server
-python-multipart  # File upload support
-send2trash        # Safe file deletion
-duplicate-images  # Perceptual hashing engine
-jinja2            # Template rendering
-opencv-python     # Image processing and sharpness detection
+fastapi>=0.104.0           # Web framework
+uvicorn[standard]>=0.24.0  # ASGI server
+python-multipart>=0.0.6    # File upload support
+send2trash>=1.8.2          # Safe file deletion
+duplicate-images>=1.0.0    # Perceptual hashing engine
+jinja2>=3.1.2              # Template rendering
+opencv-python>=4.8.0       # Image processing and sharpness detection
 ```
 
 ---
@@ -253,8 +251,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 Built with:
-- [duplicate-images](https://github.com/lene/DuplicateImages) - Finds similar images on backend
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
 - [duplicate-images](https://github.com/elisemercury/Duplicate-Images) - Perceptual hashing engine
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
 - [OpenCV](https://opencv.org/) - Image processing
 - [Tailwind CSS](https://tailwindcss.com/) - Styling

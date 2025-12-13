@@ -31,17 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAddDir = document.getElementById('btnAddDir');
     const dirList = document.getElementById('dirList');
     const btnRemoveDir = document.getElementById('btnRemoveDir');
-    const primaryDirInput = document.getElementById('primaryDir');
     const algorithmInput = document.getElementById('algorithm');
     const hashSizeInput = document.getElementById('hashSize');
     const btnStartScan = document.getElementById('btnStartScan');
+    const btnStopScan = document.getElementById('btnStopScan');
     const btnGoReview = document.getElementById('btnGoReview');
     const scanStatusEl = document.getElementById('scanStatus');
     const scanProgress = document.getElementById('scanProgress');
     const scanProgressFill = document.getElementById('scanProgressFill');
     const scanProgressText = document.getElementById('scanProgressText'); // New DOM element
     const workersInput = document.getElementById('workers');
-    const trashDirInput = document.getElementById('trashDir');
     const enableSharpnessCheck = document.getElementById('enableSharpnessCheck'); // New DOM element
 
     // --- DOM Elements (Review Screen) ---
@@ -69,12 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnFinalize = document.getElementById('btnFinalize');
     const finalizeModal = document.getElementById('finalizeModal');
     const finalizeMessage = document.getElementById('finalizeMessage');
-    const btnCancelFinalize = document.getElementById('btnCancelFinalize');
     const unreviewedWarning = document.getElementById('unreviewedWarning');
+    const optCancelFinalize = document.getElementById('optCancelFinalize');
     const optContinueReview = document.getElementById('optContinueReview');
-    const optKeepSuggested = document.getElementById('optKeepSuggested');
-    const optKeepPrimary = document.getElementById('optKeepPrimary');
-    const optApplyTrash = document.getElementById('optApplyTrash');
+    const optApplyDecision = document.getElementById('optApplyDecision');
 
     // Image Preview Modal Elements
     const imagePreviewModal = document.getElementById('imagePreviewModal');
@@ -145,8 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDir = null;
     let dirValidationState = new Map(); // tracks valid/invalid/unknown state per directory
     let currentJobId = null;
+    let lastSuccessfulJobId = null; // Track last successful scan for restoration
+    let stopRequested = false; // Track if user requested scan stop
     let initialGoReviewEnabled = false;
     let initialScanStatusMessage = '';
+    let currentJobDirectories = [];  // Store job directories from API
 
     // --- Review Screen State ---
     let allGroups = []; // Store the original fetched groups
@@ -375,21 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             dirList.appendChild(div);
         });
-        updatePrimaryDirOptions();
-    }
-
-    function updatePrimaryDirOptions() {
-        const currentVal = primaryDirInput.value;
-        primaryDirInput.innerHTML = '<option value="">(Select from added directories)</option>';
-        directories.forEach(dir => {
-            const option = document.createElement('option');
-            option.value = dir;
-            option.textContent = dir;
-            primaryDirInput.appendChild(option);
-        });
-        if (currentVal && directories.includes(currentVal)) {
-            primaryDirInput.value = currentVal;
-        }
     }
 
     function addDirectory() {
@@ -409,9 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function removeDirectory() {
         if (selectedDir) {
             directories = directories.filter(d => d !== selectedDir);
-            if (primaryDirInput.value === selectedDir) {
-                primaryDirInput.value = '';
-            }
 
             // Remove from validation state
             dirValidationState.delete(selectedDir);
@@ -463,23 +445,70 @@ document.addEventListener('DOMContentLoaded', () => {
         scanStatusEl.classList.remove('text-red-400', 'font-semibold');
     }
 
+    /**
+     * Shows the no duplicates found alert
+     */
+    function showNoDuplicatesAlert() {
+        const alertEl = document.getElementById('noDuplicatesAlert');
+        alertEl.classList.remove('hidden');
+
+        // Scroll to alert
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /**
+     * Hides the no duplicates found alert
+     */
+    function hideNoDuplicatesAlert() {
+        const alertEl = document.getElementById('noDuplicatesAlert');
+        alertEl.classList.add('hidden');
+    }
+
+    /**
+     * Shows the stopping scan alert
+     */
+    function showStoppingScanAlert() {
+        const alertEl = document.getElementById('stoppingScanAlert');
+        alertEl.classList.remove('hidden');
+
+        // Scroll to alert
+        alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /**
+     * Hides the stopping scan alert
+     */
+    function hideStoppingScanAlert() {
+        const alertEl = document.getElementById('stoppingScanAlert');
+        alertEl.classList.add('hidden');
+    }
+
     async function startScan() {
         if (directories.length === 0) {
             alert('Please add at least one directory to scan.');
             return;
         }
 
+        // Hide alerts when starting new scan
+        hideNoDuplicatesAlert();
+        hideStoppingScanAlert();
+        hideValidationError();
+
         const payload = {
             directories: directories,
-            primary_dir: primaryDirInput.value || null,
             algorithm: algorithmInput.value,
             hash_size: parseInt(hashSizeInput.value, 10),
             workers: workersInput.value ? parseInt(workersInput.value, 10) : null,
             enable_sharpness_check: enableSharpnessCheck.checked,
         };
 
+        stopRequested = false; // Reset stop flag for new scan
         btnStartScan.disabled = true;
         btnGoReview.disabled = true; // Disable review button until scan is ready
+        btnStopScan.disabled = false; // Enable stop button
+        btnStopScan.textContent = 'Stop Scan'; // Reset button text
+        btnStopScan.classList.remove('opacity-75', 'cursor-not-allowed'); // Reset styling
+        btnStopScan.style.display = 'inline-flex'; // Show stop button
         scanStatusEl.textContent = 'Starting scan... Please wait.';
         scanProgress.style.display = 'block';
         scanProgressFill.style.width = '0%'; // Reset to 0
@@ -573,39 +602,116 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (data.status === 'running' && data.progress_percent === undefined) {
                 // Fallback for simple progress simulation if backend doesn't send progress_percent
                 progress = 20 + Math.min(data.groups / 100 * 50, 75); // rough estimate
-            } else if (data.status === 'succeeded' || data.status === 'failed') {
+            } else if (data.status === 'succeeded' || data.status === 'failed' || data.status === 'cancelled') {
                 progress = 100;
             }
             
             scanProgressFill.style.width = `${progress}%`;
             scanProgressText.textContent = `${Math.round(progress)}%`;
-            
-            let statusMessage = `Status: ${data.status}`;
-            if (data.status === 'running') {
-                statusMessage += ` | Images Hashed: ${data.hashed_images || 0}/${data.total_images || '?'}`;
+
+            // Don't overwrite "Requesting scan stop..." message while waiting for cancellation
+            if (!stopRequested) {
+                let statusMessage = `Status: ${data.status}`;
+                if (data.status === 'running') {
+                    statusMessage += ` | Images Hashed: ${data.hashed_images || 0}/${data.total_images || '?'}`;
+                }
+                if (data.groups !== undefined) {
+                    statusMessage += ` | Groups Found: ${data.groups}`;
+                }
+                scanStatusEl.textContent = statusMessage;
             }
-            if (data.groups !== undefined) {
-                statusMessage += ` | Groups Found: ${data.groups}`;
-            }
-            scanStatusEl.textContent = statusMessage;
 
 
             if (data.status === 'running' || data.status === 'pending') {
                 setTimeout(() => pollStatus(jobId), 2000); // Poll every 2 seconds
             } else if (data.status === 'succeeded') {
-                scanStatusEl.textContent = `Scan complete! Found ${data.groups} groups. Ready for review.`;
-                btnGoReview.disabled = false;
+                stopRequested = false; // Reset flag
+
+                // Only save as lastSuccessfulJobId if it has groups
+                if (data.groups > 0) {
+                    lastSuccessfulJobId = currentJobId;
+                    scanStatusEl.textContent = `Scan complete! Found ${data.groups} groups. Ready for review.`;
+                    btnGoReview.disabled = false;
+                    updateGoReviewVisibility(); // Show Go to Review button
+                } else {
+                    // Scan succeeded but found no duplicates
+                    // Restore to last successful scan if one exists (don't overwrite it!)
+                    if (lastSuccessfulJobId) {
+                        currentJobId = lastSuccessfulJobId;
+                        btnGoReview.disabled = false;
+                        updateGoReviewVisibility();
+                        scanStatusEl.textContent = 'Scan complete! No duplicates found. Previous results still available.';
+                    } else {
+                        currentJobId = null;
+                        btnGoReview.disabled = true;
+                        btnGoReview.style.display = 'none';
+                        scanStatusEl.textContent = 'Scan complete! No duplicates found.';
+                    }
+                    showNoDuplicatesAlert(); // Show prominent alert
+                }
+
                 btnStartScan.disabled = false;
+                btnStopScan.style.display = 'none'; // Hide stop button
                 scanProgressFill.classList.remove('transition-all'); // Remove transition after completion
-                updateGoReviewVisibility(); // Show Go to Review button
-            } else { // failed
-                scanStatusEl.textContent = `Scan failed: ${data.message}`;
+            } else if (data.status === 'cancelled') {
+                stopRequested = false; // Reset flag
+                hideStoppingScanAlert(); // Hide stopping alert
+                scanProgress.style.display = 'none';
                 btnStartScan.disabled = false;
+                btnStopScan.style.display = 'none'; // Hide stop button
+
+                // Only restore if lastSuccessfulJobId exists AND has groups
+                if (lastSuccessfulJobId) {
+                    currentJobId = lastSuccessfulJobId;
+                    btnGoReview.disabled = false;
+                    updateGoReviewVisibility(); // Show Go to Review button for last successful scan
+                    scanStatusEl.textContent = 'Scan cancelled. Previous results available.';
+                } else {
+                    currentJobId = null;
+                    btnGoReview.disabled = true;
+                    btnGoReview.style.display = 'none';
+                    scanStatusEl.textContent = 'Scan cancelled.';
+                }
+
+                scanProgressFill.classList.remove('transition-all'); // Remove transition
+            } else { // failed
+                stopRequested = false; // Reset flag
+                hideStoppingScanAlert(); // Hide stopping alert
+                btnStartScan.disabled = false;
+                btnStopScan.style.display = 'none'; // Hide stop button
+
+                // Only restore if lastSuccessfulJobId exists AND has groups
+                if (lastSuccessfulJobId) {
+                    currentJobId = lastSuccessfulJobId;
+                    btnGoReview.disabled = false;
+                    updateGoReviewVisibility();
+                    scanStatusEl.textContent = `Scan failed. Previous results available.`;
+                } else {
+                    currentJobId = null;
+                    btnGoReview.disabled = true;
+                    btnGoReview.style.display = 'none';
+                    scanStatusEl.textContent = `Scan failed: ${data.message}`;
+                }
+
                 scanProgressFill.classList.remove('transition-all'); // Remove transition on error
             }
         } catch (error) {
+            stopRequested = false; // Reset flag
+            hideStoppingScanAlert(); // Hide stopping alert
             scanStatusEl.textContent = `Error polling: ${error.message}`;
             btnStartScan.disabled = false;
+            btnStopScan.style.display = 'none'; // Hide stop button
+
+            // Restore last successful scan if available
+            if (lastSuccessfulJobId) {
+                currentJobId = lastSuccessfulJobId;
+                btnGoReview.disabled = false;
+                updateGoReviewVisibility(); // Show Go to Review button for last successful scan
+            } else {
+                btnGoReview.disabled = true;
+                btnGoReview.style.display = 'none';
+            }
+
             scanProgressFill.classList.remove('transition-all'); // Remove transition on error
         }
     }
@@ -629,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(response.ok) {
             const data = await response.json();
             allGroups = data.groups; // Store all fetched groups
+            currentJobDirectories = data.directories || []; // Store job directories for finalize modal
             decisions = new Map(); // Reset decisions
             visitedGroups = new Set(); // Reset visited groups
 
@@ -721,7 +828,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSelectedGroup() {
         const heroImageContainer = document.getElementById('heroImageContainer'); // Get container reference
+        const heroMetadataBar = document.getElementById('heroMetadataBar'); // NEW: Get metadata bar reference
         heroImageContainer.innerHTML = ''; // Clear existing content
+        heroMetadataBar.innerHTML = ''; // NEW: Clear metadata bar
 
         if (!selectedGroup) {
             heroImageContainer.innerHTML = '<div class="text-center text-gray-400">No group selected.</div>';
@@ -742,7 +851,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const heroTextEl = document.createElement('div');
-        heroTextEl.className = 'text-left text-[#c9b8e3] mt-4';
+        heroTextEl.className = 'hero-text'; // NEW: Use hero-text class for metadata bar styling
 
         // Determine if side-by-side view is possible
         const canUseSideBySide = selectedGroup.files.length >= 2 && selectedGroup.files.length <= 3;
@@ -790,16 +899,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             heroImageContainer.appendChild(sideBySideDiv);
-            heroTextEl.style.display = 'none'; // Hide general text in side-by-side
+            // Update metadata for side-by-side view
+            heroTextEl.innerHTML = 'Side-by-side comparison view';
+            heroTextEl.className = 'hero-text text-center text-gray-500 italic';
         } else {
             // Existing single image view logic
             const img = document.createElement('img');
             img.id = 'heroImg';
             img.src = `/api/thumbnail?job_id=${currentJobId}&path=${encodeURIComponent(selectedImage)}&max_size=1024`;
             img.alt = 'Selected image';
-            img.className = 'w-full h-full max-h-full object-contain rounded-md bg-transparent';
+            // CHANGED: Removed 'h-full' to allow proper flex behavior
+            img.className = 'max-w-full max-h-full object-contain rounded-md bg-transparent';
             heroImageContainer.appendChild(img);
-            
+
             let heroText = selectedImage;
             const imageStats = selectedGroup.stats[selectedImage];
             if (imageStats) {
@@ -807,7 +919,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             heroTextEl.innerHTML = heroText;
         }
-        heroImageContainer.appendChild(heroTextEl); // Append text below images
+        // NEW: Append text to dedicated metadata bar instead of image container
+        heroMetadataBar.appendChild(heroTextEl);
         
         thumbRow.innerHTML = '';
         selectedGroup.files.forEach(file => {
@@ -988,86 +1101,106 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingText.textContent = `${decidedCount} groups decided`;
     }
 
-    async function applyFinalizeActions(unreviewedAction) {
-        const primaryDir = primaryDirInput.value;
-        const trash_dir = trashDirInput.value.trim();
-        
-        let apiCallEndpoint = '/api/actions/trash';
-        let apiPayload;
+    async function applyFinalizeActions() {
+        // Get selected action
+        const selectedAction = document.querySelector('input[name="finalizeAction"]:checked').value;
 
-        // First, apply default decisions for unreviewed groups based on unreviewedAction
-        currentGroups.forEach(group => {
-            if (!visitedGroups.has(group.id)) { // Only apply to genuinely unvisited/undecided groups
-                let keptSet = new Set();
-                if (unreviewedAction === 'keep_suggested' && group.suggested) {
-                    keptSet.add(group.suggested);
-                } else if (unreviewedAction === 'keep_primary' && primaryDir) {
-                    const primaryFiles = group.files.filter(f => f.startsWith(primaryDir));
-                    if (primaryFiles.length > 0) {
-                        keptSet.add(primaryFiles[0]);
-                    } else if (group.suggested) {
-                        keptSet.add(group.suggested);
-                    } else if (group.files.length > 0) {
-                        keptSet.add(group.files[0]);
-                    }
-                } else if (unreviewedAction === 'none' && group.suggested) { // Default to keeping suggested if 'none' and unreviewed
-                    keptSet.add(group.suggested);
-                } else if (unreviewedAction === 'none' && group.files.length > 0) { // Fallback to first if no suggested
-                    keptSet.add(group.files[0]);
-                }
-                decisions.set(group.id, keptSet);
+        // Get trash destination
+        const trashDestination = document.querySelector('input[name="trashDestination"]:checked').value;
+        const customTrashPath = document.getElementById('customTrashPath').value.trim();
+        const trashDir = trashDestination === 'custom' && customTrashPath ? customTrashPath : null;
+
+        // Validate primary directory if needed
+        if (selectedAction === 'keep_primary') {
+            const primaryDir = document.getElementById('primaryDirDropdown').value;
+            if (!primaryDir) {
+                alert('Please select a primary directory.');
+                return;
             }
-        });
+        }
 
-        const toTrash = [];
-        currentGroups.forEach(group => {
-            const finalKeptPaths = decisions.get(group.id) || new Set();
-            group.files.forEach(file => {
-                if (!finalKeptPaths.has(file)) {
-                    toTrash.push(file);
+        try {
+            let toTrash = [];
+
+            // Build trash list based on selected action
+            if (selectedAction === 'apply_decisions') {
+                // Keep user decisions, suggested for unreviewed
+                for (const group of currentGroups) {
+                    const kept = decisions.get(group.id) || new Set();
+                    if (kept.size === 0) {
+                        // Unreviewed: keep suggested, trash others
+                        toTrash.push(...group.files.filter(f => f !== group.suggested));
+                    } else {
+                        // Reviewed: trash non-kept files
+                        toTrash.push(...group.files.filter(f => !kept.has(f)));
+                    }
                 }
-            });
-        });
 
-        if (unreviewedAction === 'keep_primary' && primaryDir) {
-            apiCallEndpoint = '/api/actions/trash-non-primary';
-            apiPayload = {
-                job_id: currentJobId,
-                primary_dir: primaryDir,
-                destination: trash_dir || null,
-            };
-        } else {
-            apiPayload = {
+            } else if (selectedAction === 'keep_suggested') {
+                // Keep only suggested, disregard user decisions
+                for (const group of currentGroups) {
+                    toTrash.push(...group.files.filter(f => f !== group.suggested));
+                }
+
+            } else if (selectedAction === 'keep_primary') {
+                // Keep primary directory files (with user overrides for reviewed)
+                const primaryDir = document.getElementById('primaryDirDropdown').value;
+
+                // Use backend endpoint for this
+                const payload = {
+                    job_id: currentJobId,
+                    primary_dir: primaryDir,
+                    destination: trashDir,
+                    recreate_paths: false
+                };
+
+                const response = await fetch('/api/actions/trash-non-primary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to trash files');
+                }
+
+                finalizeModal.style.display = 'none';
+                alert(`Files moved to trash successfully.`);
+                loadGroups();
+                visitedGroups.clear();
+                return;
+            }
+
+            // For apply_decisions and keep_suggested, use standard trash endpoint
+            if (toTrash.length === 0) {
+                finalizeModal.style.display = 'none';
+                alert('No files to trash.');
+                return;
+            }
+
+            const payload = {
                 job_id: currentJobId,
                 paths: toTrash,
-                destination: trash_dir || null,
+                destination: trashDir,
+                recreate_paths: false
             };
-        }
 
-        if (toTrash.length === 0 && unreviewedAction !== 'keep_primary') {
-            alert("No files marked for deletion based on current decisions.");
-            finalizeModal.style.display = 'none';
-            return;
-        }
-
-        finalizeMessage.textContent = `Processing deletion of ${toTrash.length} files...`; // Update message
-        
-        try {
-            const response = await fetch(apiCallEndpoint, {
+            const response = await fetch('/api/actions/trash', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(apiPayload),
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || response.statusText);
+                throw new Error('Failed to move files to trash');
             }
 
             finalizeModal.style.display = 'none';
             alert(`${toTrash.length} files moved to trash.`);
-            loadGroups(); // Reload groups to reflect changes
-            visitedGroups.clear(); // Reset visited groups
+            loadGroups();
+            visitedGroups.clear();
+
         } catch (error) {
             finalizeModal.style.display = 'none';
             alert(`Failed to move files to trash: ${error.message}`);
@@ -1076,17 +1209,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function finalizePrompt() {
         const unreviewedCount = currentGroups.length - visitedGroups.size;
-        finalizeMessage.textContent = `You have decided on ${visitedGroups.size} out of ${currentGroups.length} groups.`;
-        
+        const reviewedCount = visitedGroups.size;
+
+        // Update message
+        if (reviewedCount > 0) {
+            finalizeMessage.textContent = `You have reviewed ${reviewedCount} out of ${currentGroups.length} groups.`;
+        } else {
+            finalizeMessage.textContent = `You haven't reviewed any groups yet.`;
+        }
+
+        // Show warning if unreviewed
         if (unreviewedCount > 0) {
             unreviewedWarning.style.display = 'block';
-            finalizeMessage.textContent += ` There are ${unreviewedCount} unreviewed groups.`;
+            finalizeMessage.textContent += ` ${unreviewedCount} groups remain unreviewed.`;
         } else {
             unreviewedWarning.style.display = 'none';
         }
-        
+
+        // Show/hide primary directory option based on directory count
+        const primaryDirOption = document.getElementById('primaryDirOption');
+        if (currentJobDirectories.length > 1) {
+            primaryDirOption.style.display = 'flex';
+
+            // Populate primary directory dropdown
+            const dropdown = document.getElementById('primaryDirDropdown');
+            dropdown.innerHTML = '<option value="">-- Select Directory --</option>';
+            currentJobDirectories.forEach(dir => {
+                const option = document.createElement('option');
+                option.value = dir;
+                option.textContent = dir;
+                dropdown.appendChild(option);
+            });
+        } else {
+            primaryDirOption.style.display = 'none';
+        }
+
+        // Reset form to defaults
+        document.getElementById('trashSystem').checked = true;
+        document.querySelector('input[name="finalizeAction"][value="apply_decisions"]').checked = true;
+        document.getElementById('customTrashPath').disabled = true;
+        document.getElementById('customTrashPath').value = '';
+        document.getElementById('primaryDirControls').style.display = 'none';
+
         finalizeModal.style.display = 'flex';
     }
+
+    // Handle trash destination radio change
+    document.querySelectorAll('input[name="trashDestination"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const customPathInput = document.getElementById('customTrashPath');
+            if (e.target.value === 'custom') {
+                customPathInput.disabled = false;
+                customPathInput.focus();
+            } else {
+                customPathInput.disabled = true;
+                customPathInput.value = '';
+            }
+        });
+    });
+
+    // Handle action radio change - show/hide primary controls
+    document.querySelectorAll('input[name="finalizeAction"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const primaryControls = document.getElementById('primaryDirControls');
+            if (e.target.value === 'keep_primary') {
+                primaryControls.style.display = 'block';
+            } else {
+                primaryControls.style.display = 'none';
+            }
+        });
+    });
 
 
     // --- Event Listeners ---
@@ -1098,6 +1290,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     btnRemoveDir.addEventListener('click', removeDirectory);
     btnStartScan.addEventListener('click', startScan);
+    btnStopScan.addEventListener('click', async () => {
+        if (!currentJobId) return;
+
+        stopRequested = true; // Mark that stop was requested
+        showStoppingScanAlert(); // Show prominent alert
+        btnStopScan.disabled = true;
+        btnStopScan.textContent = 'Stopping...'; // Change button text
+        btnStopScan.classList.add('opacity-75', 'cursor-not-allowed'); // Visual feedback
+        scanStatusEl.textContent = 'Requesting scan stop...';
+
+        try {
+            const response = await fetch(`/api/scan/${currentJobId}/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                hideStoppingScanAlert(); // Hide alert on error
+                alert(`Failed to stop scan: ${errorData.detail}`);
+                btnStopScan.disabled = false;
+                btnStopScan.textContent = 'Stop Scan'; // Restore button text
+                btnStopScan.classList.remove('opacity-75', 'cursor-not-allowed');
+                stopRequested = false; // Reset flag on failure
+            }
+            // Polling will detect the "cancelled" status and update UI automatically
+        } catch (error) {
+            hideStoppingScanAlert(); // Hide alert on error
+            alert(`Error stopping scan: ${error.message}`);
+            btnStopScan.disabled = false;
+            btnStopScan.textContent = 'Stop Scan'; // Restore button text
+            btnStopScan.classList.remove('opacity-75', 'cursor-not-allowed');
+            stopRequested = false; // Reset flag on error
+        }
+    });
     btnGoReview.addEventListener('click', () => {
         if(currentJobId) {
             showReviewScreen();
@@ -1110,6 +1337,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const dismissValidationError = document.getElementById('dismissValidationError');
     if (dismissValidationError) {
         dismissValidationError.addEventListener('click', hideValidationError);
+    }
+
+    // Dismiss no duplicates alert
+    const dismissNoDuplicatesAlert = document.getElementById('dismissNoDuplicatesAlert');
+    if (dismissNoDuplicatesAlert) {
+        dismissNoDuplicatesAlert.addEventListener('click', hideNoDuplicatesAlert);
     }
 
     btnBackToScanSetup.addEventListener('click', showScanSetupScreen);
@@ -1164,18 +1397,36 @@ document.addEventListener('DOMContentLoaded', () => {
     actTrashNonSuggested.addEventListener('click', trashNonSuggested);
 
     btnFinalize.addEventListener('click', finalizePrompt);
-    btnCancelFinalize.addEventListener('click', () => {
+
+    // Finalize modal buttons
+    optCancelFinalize.addEventListener('click', () => {
         finalizeModal.style.display = 'none';
     });
 
-    // New finalize modal actions
     optContinueReview.addEventListener('click', () => {
         finalizeModal.style.display = 'none';
     });
-    optKeepSuggested.addEventListener('click', () => applyFinalizeActions('keep_suggested'));
-    optKeepPrimary.addEventListener('click', () => applyFinalizeActions('keep_primary'));
-    optApplyTrash.addEventListener('click', () => applyFinalizeActions('none'));
 
+    optApplyDecision.addEventListener('click', applyFinalizeActions);
+
+    // Keyboard shortcuts for finalize modal
+    window.addEventListener('keydown', (e) => {
+        // Only handle if finalize modal is visible
+        if (finalizeModal.style.display !== 'flex') return;
+
+        switch(e.key) {
+            case 'Enter':
+                // Primary action on Enter (Apply Decision)
+                document.getElementById('optApplyDecision').click();
+                e.preventDefault();
+                break;
+            case 'Escape':
+                // Cancel on Escape (Continue Reviewing)
+                document.getElementById('optContinueReview').click();
+                e.preventDefault();
+                break;
+        }
+    });
 
     window.addEventListener('keydown', (e) => {
         if (screenReview.style.display !== 'block') return;
@@ -1324,19 +1575,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check for previous job on load
     loadLatestJob().then(job => {
-        if (job.job_id && (job.status === 'succeeded' || job.status === 'running')) {
+        if (job.job_id && job.status === 'succeeded' && job.groups > 0) {
+            // Backend returned a reviewable job
             currentJobId = job.job_id;
+            lastSuccessfulJobId = job.job_id;
             btnGoReview.disabled = false;
-            scanStatusEl.textContent = `Scan loaded. Click 'Go to Review'.`;
-
-            // Capture initial state here
-            initialGoReviewEnabled = !btnGoReview.disabled; // True if button is enabled
-            initialScanStatusMessage = scanStatusEl.textContent;
+            scanStatusEl.textContent = `Last scan found ${job.groups} group${job.groups > 1 ? 's' : ''}. Click 'Go to Review'.`;
+        } else if (job.job_id && job.status === 'running') {
+            // Scan is still running
+            currentJobId = job.job_id;
+            btnGoReview.disabled = true;
+            scanStatusEl.textContent = 'Scan in progress... (refresh to see results)';
+        } else if (job.status === 'succeeded' && job.groups === 0) {
+            // Most recent scan found no duplicates (no reviewable jobs exist)
+            currentJobId = null;
+            btnGoReview.disabled = true;
+            scanStatusEl.textContent = 'Last scan found no duplicates.';
+        } else {
+            // No previous job
+            currentJobId = null;
+            btnGoReview.disabled = true;
+            scanStatusEl.textContent = '';
         }
-        // Also update primaryDirInput from the loaded job
-        // For now, assume primaryDirInput is not managed by job load
 
-        // Update button visibility based on initial state
+        // Capture initial state
+        initialGoReviewEnabled = !btnGoReview.disabled;
+        initialScanStatusMessage = scanStatusEl.textContent;
+
+        // Update button visibility
         updateRemoveButtonVisibility();
         updateGoReviewVisibility();
         updateStartScanButton();

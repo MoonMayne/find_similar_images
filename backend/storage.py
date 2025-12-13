@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     status TEXT,
     message TEXT,
     created_at REAL,
-    finished_at REAL
+    finished_at REAL,
+    cancel_requested INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -62,8 +63,8 @@ class SQLiteStore:
         with self._lock, self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO jobs (id, directories, primary_dir, threshold, algorithm, workers, hash_db, hash_size, status, message, created_at, finished_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO jobs (id, directories, primary_dir, threshold, algorithm, workers, hash_db, hash_size, status, message, created_at, finished_at, cancel_requested)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     directories=excluded.directories,
                     primary_dir=excluded.primary_dir,
@@ -75,7 +76,8 @@ class SQLiteStore:
                     status=excluded.status,
                     message=excluded.message,
                     created_at=excluded.created_at,
-                    finished_at=excluded.finished_at
+                    finished_at=excluded.finished_at,
+                    cancel_requested=excluded.cancel_requested
                 """,
                 (
                     job.id,
@@ -90,6 +92,7 @@ class SQLiteStore:
                     job.message,
                     job.created_at,
                     job.finished_at,
+                    1 if job.cancel_requested else 0,
                 ),
             )
             conn.commit()
@@ -117,6 +120,13 @@ class SQLiteStore:
 
     def load_jobs(self) -> List[ScanJob]:
         with self._lock, self._connect() as conn:
+            # Check if cancel_requested column exists, if not add it
+            cursor = conn.execute("PRAGMA table_info(jobs)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "cancel_requested" not in columns:
+                conn.execute("ALTER TABLE jobs ADD COLUMN cancel_requested INTEGER DEFAULT 0")
+                conn.commit()
+
             jobs: List[ScanJob] = []
             job_rows = conn.execute("SELECT * FROM jobs").fetchall()
             group_rows = conn.execute("SELECT job_id, group_index, files, suggested, stats FROM groups").fetchall()
@@ -144,6 +154,7 @@ class SQLiteStore:
                 message,
                 created_at,
                 finished_at,
+                cancel_requested,
             ) = row
             jobs.append(
                 ScanJob(
@@ -160,6 +171,7 @@ class SQLiteStore:
                     created_at=created_at,
                     finished_at=finished_at,
                     groups=sorted(group_map.get(job_id, []), key=lambda g: g.id),
+                    cancel_requested=bool(cancel_requested),
                 )
             )
         return jobs

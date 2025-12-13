@@ -21,7 +21,7 @@ class ScanJob:
     id: str
     directories: List[str]
     primary_dir: Optional[str]
-    threshold: int
+    threshold: int  # Unused - max_distance is always 0 (required for --group mode)
     algorithm: str
     workers: Optional[int]
     hash_db: Optional[str]
@@ -31,6 +31,7 @@ class ScanJob:
     created_at: float = field(default_factory=time.time)
     finished_at: Optional[float] = None
     groups: List[GroupResult] = field(default_factory=list)
+    cancel_requested: bool = False  # Flag for user-requested cancellation
 
 
 class JobStore:

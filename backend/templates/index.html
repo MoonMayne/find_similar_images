@@ -50,24 +50,6 @@
                         <div class="space-y-6">
                             <div>
                                 <div class="flex items-center">
-                                    <label for="primaryDir" class="block text-sm font-medium text-gray-300">Primary Directory</label>
-                                    <div class="group relative ml-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                                        </svg>
-                                        <div class="absolute bottom-full z-10 mb-2 hidden w-64 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
-                                            If set, images in this directory will be suggested as the 'keeper' by default.
-                                        </div>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-gray-400 mb-2">Files in this directory will be preferred as keepers.</p>
-                                <select id="primaryDir" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none ">
-                                    <option value="">(Select from added directories)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <div class="flex items-center">
                                     <label for="algorithm" class="block text-sm font-medium text-gray-300">Algorithm</label>
                                     <div class="group relative ml-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
@@ -127,21 +109,6 @@
                                 <p class="text-xs text-gray-400 mb-2">Defaults to CPU count if empty.</p>
                                 <input type="number" id="workers" min="1" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none ">
                             </div>
-                            <div>
-                                <div class="flex items-center">
-                                    <label for="trashDir" class="block text-sm font-medium text-gray-300">Custom Trash Directory</label>
-                                    <div class="group relative ml-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                                        </svg>
-                                        <div class="absolute bottom-full z-10 mb-2 hidden w-64 rounded-md bg-gray-800 p-2 text-xs text-white group-hover:block border border-gray-700">
-                                            Specify a custom directory where deleted images will be moved. If left empty, they will go to the system's default trash.
-                                        </div>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-gray-400 mb-2">Specify a custom directory to move deleted files to.</p>
-                                <input type="text" id="trashDir" placeholder="/path/to/custom/trash" class="mt-1 block w-full bg-gray-800 text-white border border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none  placeholder-gray-500">
-                            </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="enableSharpnessCheck" class="h-4 w-4 text-[#9c539c] focus:ring-[#9c539c] border-gray-700 rounded">
                                 <div class="flex items-center ml-2">
@@ -165,6 +132,7 @@
                 <div class="mt-8 border-t border-gray-700 pt-6 flex items-center justify-between">
                     <div>
                         <button id="btnStartScan" class="gradient-button-primary text-white font-medium py-2 px-6 rounded-md">Start Scan</button>
+                        <button id="btnStopScan" class="ml-4 gradient-button-destructive text-white font-medium py-2 px-6 rounded-md" style="display: none;">Stop Scan</button>
                         <button id="btnGoReview" class="ml-4 gradient-button-secondary text-white font-medium py-2 px-6 rounded-md" disabled>Go to Review</button>
                     </div>
                     <div id="scanStatus" class="text-sm text-gray-500"></div>
@@ -183,6 +151,34 @@
                                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                             </svg>
                         </button>
+                    </div>
+                </div>
+                <div id="noDuplicatesAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-[#14b8a6] text-white rounded-md shadow-lg">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 flex-shrink-0 text-[#14b8a6]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-lg">Scan Complete</h4>
+                            <p class="mt-1 text-sm text-gray-300">No duplicate images found in the scanned directories.</p>
+                        </div>
+                        <button id="dismissNoDuplicatesAlert" class="ml-4 text-[#14b8a6] hover:text-gray-400">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="stoppingScanAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-orange-500 text-white rounded-md shadow-lg">
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 mr-3 flex-shrink-0 text-orange-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-lg">Stopping Scan</h4>
+                            <p class="mt-1 text-sm text-gray-300">Please wait while the scan is safely cancelled...</p>
+                        </div>
                     </div>
                 </div>
                  <div class="w-full bg-black rounded-full h-7 mt-4 border border-gray-700" id="scanProgress" style="display:none;">
@@ -248,11 +244,18 @@
                 <!-- Right Column: Image Preview and Actions -->
                 <div class="lg:col-span-3">
                     <div class="bg-black rounded-lg shadow-inner p-4 h-[70vh] flex flex-col border border-gray-700">
-                        <div class="relative mb-4 flex-grow" id="heroImageContainer">
-                            <!-- Image(s) and associated text/badges will be dynamically injected here by JavaScript -->
-
+                        <!-- Image viewing area with constrained height -->
+                        <div class="relative flex-grow min-h-0" id="heroImageContainer">
+                            <!-- Images will be injected here -->
                         </div>
-                        <div id="thumbRow" class="flex items-center space-x-4 overflow-x-auto pb-2 flex-shrink-0">
+
+                        <!-- Fixed metadata bar (always visible, never overlapped) -->
+                        <div id="heroMetadataBar" class="flex-shrink-0 border-t border-gray-700 pt-2 mt-2 min-h-[3rem]">
+                            <!-- File path and stats text will be injected here -->
+                        </div>
+
+                        <!-- Thumbnail row -->
+                        <div id="thumbRow" class="flex items-center space-x-4 overflow-x-auto pb-2 flex-shrink-0 border-t border-gray-700 pt-2 mt-2">
                             <!-- Thumbnails will be injected here -->
                         </div>
                     </div>
@@ -279,18 +282,114 @@
                 </div>
             </div>
              <!-- Finalize Modal -->
-            <div id="finalizeModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center" style="display: none;">
-                <div class="gradient-card border border-gray-700 p-8 rounded-lg shadow-2xl w-full max-w-md">
-                    <h3 class="text-2xl font-medium text-white mb-4">Finalize Actions</h3>
-                    <p id="finalizeMessage" class="text-gray-300 mb-6"></p>
-                    <p id="unreviewedWarning" class="text-yellow-400 mb-4" style="display: none;">You have unreviewed groups. How would you like to proceed?</p>
-                    <div class="flex flex-col space-y-4">
-                        <button id="optContinueReview" class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">Continue Reviewing</button>
-                        <button id="optKeepSuggested" class="gradient-button-primary text-white font-medium py-2 px-4 rounded-md">Keep All Suggested (Delete Others)</button>
-                        <button id="optKeepPrimary" class="gradient-button-primary text-white font-medium py-2 px-4 rounded-md">Keep All in Primary Directory (Delete Others)</button>
-                        <button id="optApplyTrash" class="gradient-button-destructive text-gray-300 font-medium py-2 px-4 rounded-md">Apply Decisions & Trash</button>
+            <div id="finalizeModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50" style="display: none;">
+                <div class="gradient-card border border-gray-700 p-8 rounded-lg shadow-2xl w-full max-w-2xl">
+                    <h3 class="text-2xl font-medium text-white mb-6">Finalize Actions</h3>
+
+                    <!-- Progress Info -->
+                    <p id="finalizeMessage" class="text-gray-300 mb-4"></p>
+                    <p id="unreviewedWarning" class="text-yellow-400 mb-6" style="display: none;">
+                        ⚠️ You have unreviewed groups. Choose how to handle them:
+                    </p>
+
+                    <!-- Trash Settings Section -->
+                    <div class="mb-6 pb-6 border-b border-gray-700">
+                        <h4 class="text-lg font-medium text-white mb-3">Trash Destination</h4>
+                        <div class="space-y-2">
+                            <!-- System Trash (Default) -->
+                            <label class="flex items-start cursor-pointer group">
+                                <input type="radio" name="trashDestination" value="system" checked
+                                       class="mt-1 accent-teal-500" id="trashSystem">
+                                <div class="ml-3">
+                                    <span class="text-white font-medium">System Trash</span>
+                                    <span class="text-gray-400 text-sm ml-2">(Recommended)</span>
+                                </div>
+                            </label>
+
+                            <!-- Custom Path -->
+                            <label class="flex items-start cursor-pointer group">
+                                <input type="radio" name="trashDestination" value="custom"
+                                       class="mt-1 accent-teal-500" id="trashCustom">
+                                <div class="ml-3 flex-1">
+                                    <span class="text-white font-medium">Custom Path</span>
+                                    <input type="text" id="customTrashPath" placeholder="/path/to/trash"
+                                           class="mt-2 block w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2 text-sm"
+                                           disabled>
+                                </div>
+                            </label>
+                        </div>
                     </div>
-                    <button id="btnCancelFinalize" class="mt-6 w-full gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">Cancel</button>
+
+                    <!-- Action Selection Section -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium text-white mb-3">Action (select one)</h4>
+                        <div class="space-y-4">
+
+                            <!-- Option 1: Keep My Decisions -->
+                            <label class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group">
+                                <input type="radio" name="finalizeAction" value="apply_decisions" checked
+                                       class="mt-1 accent-teal-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep My Decisions & Trash Others</div>
+                                    <div class="text-gray-400 text-sm mt-1">
+                                        Keeps the images you've selected to keep.<br>
+                                        <span class="text-gray-500">Unreviewed groups: Keeps suggested image by default.</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Option 2: Keep All Suggested -->
+                            <label class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group">
+                                <input type="radio" name="finalizeAction" value="keep_suggested"
+                                       class="mt-1 accent-teal-500">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep All Suggested</div>
+                                    <div class="text-gray-400 text-sm mt-1">
+                                        Disregard your selections and ONLY keep suggested image per group.<br>
+                                        <span class="text-gray-500">All non-suggested images will be trashed.</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <!-- Option 3: Keep All in Primary Directory (conditional) -->
+                            <label id="primaryDirOption" class="flex items-start cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-teal-500 transition-colors group" style="display: none;">
+                                <input type="radio" name="finalizeAction" value="keep_primary"
+                                       class="mt-1 accent-teal-500" id="radioPrimary">
+                                <div class="ml-3 flex-1">
+                                    <div class="text-white font-medium text-lg">Keep All in Primary Directory</div>
+                                    <div class="text-gray-400 text-sm mt-1 mb-3">
+                                        <strong class="text-teal-400">Reviewed groups:</strong> Your decisions apply.<br>
+                                        <strong class="text-teal-400">Unreviewed groups:</strong> ALL files from primary directory are kept.
+                                    </div>
+
+                                    <!-- Nested Primary Directory Selection -->
+                                    <div id="primaryDirControls" class="mt-3 pl-4 border-l-2 border-teal-500" style="display: none;">
+                                        <label class="text-white text-sm font-medium mb-2 block">
+                                            Select Primary Directory:
+                                        </label>
+                                        <select id="primaryDirDropdown"
+                                                class="w-full bg-gray-800 text-white border border-gray-600 rounded-md px-3 py-2">
+                                            <option value="">-- Select Directory --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                        <button id="optCancelFinalize" class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">
+                            Cancel
+                        </button>
+                        <button id="optContinueReview" class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">
+                            ← Continue Reviewing
+                        </button>
+                        <button id="optApplyDecision" class="gradient-button-primary text-white font-medium py-3 px-6 rounded-md">
+                            Apply Decision
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -347,6 +446,6 @@
 
     </div>
 
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=6"></script>
 </body>
 </html>

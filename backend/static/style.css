@@ -147,6 +147,93 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+/* ===================================
+   FINALIZE MODAL BUTTON VARIANTS
+   =================================== */
+
+/* Ghost/Tertiary Button - For de-emphasized actions */
+.gradient-button-ghost {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.gradient-button-ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.gradient-button-ghost:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.gradient-button-ghost:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Finalize Modal Tooltips */
+.tooltip-finalize {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 12px 16px;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: normal;
+    width: max-content;
+    max-width: 320px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+}
+
+.tooltip-finalize strong {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.tooltip-finalize em {
+    color: var(--text-tertiary);
+    font-style: italic;
+}
+
+/* Show tooltip on hover */
+.group:hover .tooltip-finalize {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tooltip arrow */
+.tooltip-finalize::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--border-strong);
+}
+
+/* Consistent button sizing */
+.finalize-action-button {
+    min-width: 200px;
+    justify-content: center;
+    text-align: center;
+}
+
 /* Remove old glow hover effects */
 .primary-glow-hover:hover,
 .destructive-glow-hover:hover,
@@ -160,10 +247,39 @@ h1, h2, h3, h4, h5, h6 {
 #heroImageContainer {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: center;  /* Changed from flex-start to center images */
     align-items: center;
     flex-grow: 1;
-    min-height: 0;
+    min-height: 0;  /* Critical for flex shrinking */
+    overflow: hidden; /* Prevent overflow */
+}
+
+/* Ensure images don't exceed container */
+#heroImageContainer img {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* Metadata bar styling */
+#heroMetadataBar {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 3rem;
+    max-height: 5rem; /* Prevent excessive growth */
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+#heroMetadataBar .hero-text {
+    font-size: 0.875rem;
+    color: #c9b8e3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
 }
 
 .side-by-side-img-container {

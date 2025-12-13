@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, validator
 
 
-from backend.config import DEFAULT_THRESHOLD, DEFAULT_WORKERS, HASH_DB, TRASH_DIR, THUMBNAIL_MAX_SIZE
+from backend.config import DEFAULT_WORKERS, HASH_DB, TRASH_DIR, THUMBNAIL_MAX_SIZE
 from backend.core.hash_engine import scan_and_group
 from backend.core.file_manager import TrashConfig, move_to_trash
 from backend.state import JOB_STORE, GroupResult, ScanJob
@@ -78,6 +78,13 @@ class GroupsResponse(BaseModel):
     job_id: str
     total_groups: int
     groups: List[GroupOut]
+    directories: List[str]
+
+
+class LatestJobResponse(BaseModel):
+    job_id: Optional[str]
+    status: str
+    groups: int
 
 
 class TrashRequest(BaseModel):
@@ -136,6 +143,11 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
 
     # Helper function to perform the actual scan_and_group logic
     def perform_scan_attempt():
+        # Check if cancelled before starting scan
+        current_job = JOB_STORE.get(job.id)
+        if current_job and current_job.cancel_requested:
+            return None  # Signal cancellation
+
         return scan_and_group(
             directories=[p for p in payload.directories],
             hash_size=payload.hash_size,
@@ -149,6 +161,14 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
     try:
         try:
             groups = perform_scan_attempt()
+
+            # Check if cancelled after scan completes
+            current_job = JOB_STORE.get(job.id)
+            if groups is None or (current_job and current_job.cancel_requested):
+                job.status = "cancelled"
+                job.message = "Scan cancelled by user"
+                return
+
         except ValueError as err:
             # Check for Metadata mismatch error from duplicate_images library
             if "Metadata mismatch" in str(err) and payload.hash_db and payload.hash_db.exists():
@@ -157,6 +177,14 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
                     payload.hash_db.unlink()  # Delete the conflicting hash_db file
                     logging.info(f"Cleared hash_db: {payload.hash_db}. Retrying scan.")
                     groups = perform_scan_attempt() # Retry scan
+
+                    # Check cancellation after retry
+                    current_job = JOB_STORE.get(job.id)
+                    if groups is None or (current_job and current_job.cancel_requested):
+                        job.status = "cancelled"
+                        job.message = "Scan cancelled by user"
+                        return
+
                 except Exception as retry_err:
                     logging.exception(f"Scan failed after clearing hash_db and retrying: {retry_err}")
                     job.status = "failed"
@@ -173,7 +201,14 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
             job.status = "failed"
             job.message = str(err)
             groups = None
-        
+
+        # Check cancellation before processing groups
+        current_job = JOB_STORE.get(job.id)
+        if current_job and current_job.cancel_requested:
+            job.status = "cancelled"
+            job.message = "Scan cancelled by user"
+            return
+
         # Only proceed to process groups if a valid 'groups' list was obtained and job status is not already failed
         if groups is not None and job.status != "failed":
             group_results: List[GroupResult] = []
@@ -194,6 +229,13 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
 
                 # Collect results as they complete
                 for future in futures:
+                    # Check cancellation between processing each group
+                    current_job = JOB_STORE.get(job.id)
+                    if current_job and current_job.cancel_requested:
+                        job.status = "cancelled"
+                        job.message = "Scan cancelled by user"
+                        return
+
                     group_results.append(future.result())
 
             job.groups = group_results
@@ -222,7 +264,7 @@ def start_scan(payload: ScanRequest) -> ScanResponse:
     job = JOB_STORE.create(
         directories=[str(p) for p in payload.directories],
         primary_dir=str(payload.primary_dir) if payload.primary_dir else None,
-        threshold=0,
+        threshold=0,  # Unused - kept for database compatibility
         algorithm=payload.algorithm,
         workers=payload.workers,
         hash_db=str(payload.hash_db) if payload.hash_db else None,
@@ -240,6 +282,27 @@ def get_job_status(job_id: str) -> JobStatusResponse:
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return JobStatusResponse(job_id=job.id, status=job.status, message=job.message, groups=len(job.groups))
+
+
+@router.post("/scan/{job_id}/stop")
+def stop_scan(job_id: str) -> Dict[str, str]:
+    """Request cancellation of a running scan."""
+    job = JOB_STORE.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status not in ["pending", "running"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot stop job with status: {job.status}"
+        )
+
+    # Set cancellation flag
+    job.cancel_requested = True
+    JOB_STORE.update(job)
+    STORE.save_job(job)
+
+    return {"status": "ok", "message": "Cancellation requested"}
 
 
 @router.get("/groups", response_model=GroupsResponse)
@@ -278,7 +341,7 @@ def list_groups(job_id: str, limit: int = 50, offset: int = 0) -> GroupsResponse
 
     selected = filtered_groups[offset : offset + limit]
     group_out = [GroupOut(**gr.__dict__) for gr in selected]
-    return GroupsResponse(job_id=job.id, total_groups=len(filtered_groups), groups=group_out)
+    return GroupsResponse(job_id=job.id, total_groups=len(filtered_groups), groups=group_out, directories=job.directories)
 
 
 @router.post("/actions/trash")
@@ -296,6 +359,31 @@ def trash_non_primary(payload: TrashNonPrimaryRequest):
     job = JOB_STORE.get(payload.job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    # 🚨 CRITICAL VALIDATION: Prevent data loss
+    # This endpoint should only work when:
+    # 1. Multiple directories were scanned (len(job.directories) > 1)
+    # 2. Primary directory is set and valid
+    if len(job.directories) <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot use 'Keep Primary Directory' - only one directory was scanned. This operation requires multiple directories."
+        )
+
+    if not payload.primary_dir:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot use 'Keep Primary Directory' - no primary directory specified"
+        )
+
+    # Additional safety: Check that primary_dir is actually one of the scanned directories
+    job_dir_paths = [Path(d).resolve() for d in job.directories]
+    if payload.primary_dir.resolve() not in job_dir_paths:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Primary directory {payload.primary_dir} was not part of the scan"
+        )
+
     victims: List[Path] = []
     for group in job.groups:
         primary_files = [Path(f) for f in group.files if payload.primary_dir in Path(f).parents]
@@ -313,16 +401,40 @@ def rebuild_db():
     return {"status": "ok", "message": "Database rebuilt (tables recreated and cleared)"}
 
 
-@router.get("/latest-job")
-def get_latest_job() -> Dict[str, Optional[str]]:
+@router.get("/latest-job", response_model=LatestJobResponse)
+def get_latest_job() -> LatestJobResponse:
     jobs = JOB_STORE.all()
     active_jobs = [job for job in jobs if job.status in ["succeeded", "running", "pending"]]
     if not active_jobs:
-        return {"job_id": None, "status": "none"}
-    
-    # Sort by created_at descending to get the most recent
-    latest_job = sorted(active_jobs, key=lambda job: job.created_at, reverse=True)[0]
-    return {"job_id": latest_job.id, "status": latest_job.status}
+        return LatestJobResponse(job_id=None, status="none", groups=0)
+
+    # Sort by created_at descending
+    sorted_jobs = sorted(active_jobs, key=lambda job: job.created_at, reverse=True)
+
+    # Find most recent job with groups > 0 (reviewable job)
+    reviewable_job = None
+    for job in sorted_jobs:
+        if job.status == "succeeded" and len(job.groups) > 0:
+            reviewable_job = job
+            break
+
+    # If we found a reviewable job, return it
+    if reviewable_job:
+        return LatestJobResponse(
+            job_id=reviewable_job.id,
+            status=reviewable_job.status,
+            groups=len(reviewable_job.groups)
+        )
+
+    # Otherwise, return the most recent job (for status messaging)
+    # For running scans, return job_id so polling continues
+    # For succeeded scans with 0 groups, return job_id=None
+    latest_job = sorted_jobs[0]
+    return LatestJobResponse(
+        job_id=latest_job.id if latest_job.status == "running" else None,
+        status=latest_job.status,
+        groups=len(latest_job.groups)
+    )
 
 
 @router.get("/thumbnail")
