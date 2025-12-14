@@ -2,8 +2,6 @@ from pathlib import Path
 import hashlib
 from typing import Dict
 from backend.config import THUMBNAIL_CACHE_DIR, THUMBNAIL_MAX_SIZE, DATA_DIR
-from backend.storage import STORE
-from backend.state import JOB_STORE
 import logging
 
 
@@ -19,6 +17,8 @@ def _compute_thumbnail_path(source_path: Path, max_size: int = THUMBNAIL_MAX_SIZ
 
 def cleanup_orphaned_thumbnails() -> Dict[str, int]:
     """Delete thumbnails for images that no longer exist"""
+    from backend.state import JOB_STORE
+
     deleted = 0
     errors = 0
 
@@ -44,6 +44,8 @@ def cleanup_orphaned_thumbnails() -> Dict[str, int]:
 def reset_all_app_data() -> Dict[str, bool]:
     """Nuclear reset: Delete ALL app data"""
     from fastapi import HTTPException
+    from backend.state import JOB_STORE
+    from backend.api.routes import STORE
 
     # Safety check: Don't reset during active scan
     active_jobs = [j for j in JOB_STORE.all() if j.status in ["pending", "running"]]
