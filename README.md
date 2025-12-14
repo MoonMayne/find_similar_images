@@ -11,7 +11,7 @@
 
 ```bash
 # Clone, setup, install, and run (all in one)
-git clone https://github.com/YOUR_USERNAME/find_similar_images.git && \
+git clone https://github.com/sanhak994/find_similar_images.git && \
 cd find_similar_images && \
 python3 -m venv venv && \
 source venv/bin/activate && \
@@ -55,17 +55,11 @@ python -m backend.app
 - **Smart Suggestions** - Intelligent keeper suggestions based on sharpness, resolution, and metadata
 - **Parallel Processing** - Multi-threaded hashing for faster scans
 - **Persistent Cache** - Reuse hashes across scans for speed
+- **Automatic Cache Cleanup** - Orphaned thumbnails automatically removed on scan start
+- **Stop Scan** - Cancel running scans at any time
+- **Reset All Data** - Double-confirmation wipe of all cached data (thumbnails, hashes, scan history)
 - **Modern UI** - Dark theme with intuitive keyboard shortcuts
 - **Image Metadata** - View resolution, file size, EXIF data, and sharpness scores
-
----
-
-## System Requirements
-
-- Python 3.8 or higher (tested on 3.14)
-- macOS, Linux, or Windows
-- 512MB RAM minimum
-- Modern web browser (Chrome, Firefox, Safari, Edge)
 
 ---
 
@@ -108,6 +102,8 @@ python -m backend.app
 
 ## Hash Algorithms Guide
 
+Take a look at the [duplicate-images](https://github.com/elisemercury/Duplicate-Images) repo for higher quality info about hashes
+
 | Algorithm | Speed | Accuracy | Best For |
 |-----------|-------|----------|----------|
 | `phash` (default) | Medium | High | General purpose |
@@ -141,7 +137,6 @@ python -m backend.app
 | `↑` / `↓` | Navigate between groups |
 | `←` / `→` | Select previous/next image in group |
 | `Z` (hold) | Magnify current image |
-| `?` | Show shortcuts help dialog |
 
 ---
 
@@ -160,7 +155,8 @@ find_similar_images/
 │   │   └── file_manager.py # File operations
 │   ├── utils/
 │   │   ├── image_utils.py  # Metadata extraction
-│   │   └── thumbnails.py   # Thumbnail generation
+│   │   ├── thumbnails.py   # Thumbnail generation
+│   │   └── cleanup.py      # Cache cleanup and data reset
 │   ├── static/
 │   │   ├── script.js       # Frontend logic
 │   │   └── style.css       # Custom styling
@@ -183,11 +179,13 @@ find_similar_images/
 For advanced users and developers:
 
 ```
-POST   /api/scan                    - Start background scan
-GET    /api/scan/{job_id}          - Poll scan status
-GET    /api/groups                 - Get paginated groups
-POST   /api/actions/trash          - Move files to trash
-GET    /api/thumbnail              - Get cached thumbnail
+POST   /api/scan                      - Start background scan
+GET    /api/scan/{job_id}             - Poll scan status
+GET    /api/groups                    - Get paginated groups
+POST   /api/actions/trash             - Move files to trash
+GET    /api/thumbnail                 - Get cached thumbnail
+POST   /api/admin/cleanup-thumbnails  - Clean orphaned thumbnails
+POST   /api/admin/reset-app-data      - Reset all app data
 ```
 
 ---
@@ -199,12 +197,12 @@ GET    /api/thumbnail              - Get cached thumbnail
 - Verify images are in supported formats (Only tested with .jpg, .jpeg, but others might work)
 - Check console for error messages
 
-### Images not grouping together
+### Image grouping issues 
 - Try adjusting **hash size** in the scan setup:
   - **Increase hash size** (e.g., 16 or 32) if you want STRICTER matching (only very similar images)
   - **Decrease hash size** (e.g., 4 or 6) if you want MORE LENIENT matching (groups more images)
-- Use `crop_resistant` algorithm for cropped or resized images
-- Try different algorithms - some work better for specific image types
+- Use the `crop_resistant` algorithm for cropped or resized images
+- Try different algorithms
 
 ### Slow scanning
 - Reduce number of workers if CPU usage is too high
