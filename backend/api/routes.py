@@ -261,6 +261,14 @@ def _run_scan(job: ScanJob, payload: ScanRequest) -> None:
 
 @router.post("/scan", response_model=ScanResponse)
 def start_scan(payload: ScanRequest) -> ScanResponse:
+    # Auto-cleanup orphaned thumbnails before starting scan
+    try:
+        from backend.utils.cleanup import cleanup_orphaned_thumbnails
+        cleanup_orphaned_thumbnails()
+    except Exception as e:
+        logging.warning(f"Auto-cleanup failed: {e}")
+        # Don't block scan on cleanup failure
+
     job = JOB_STORE.create(
         directories=[str(p) for p in payload.directories],
         primary_dir=str(payload.primary_dir) if payload.primary_dir else None,
@@ -399,6 +407,30 @@ def rebuild_db():
     STORE.rebuild()
     JOB_STORE.reset([])
     return {"status": "ok", "message": "Database rebuilt (tables recreated and cleared)"}
+
+
+@router.post("/admin/cleanup-thumbnails")
+def cleanup_thumbnails():
+    """Clean orphaned thumbnails"""
+    from backend.utils.cleanup import cleanup_orphaned_thumbnails
+    stats = cleanup_orphaned_thumbnails()
+    return {
+        "status": "ok",
+        "message": f"Cleaned {stats['deleted']} orphaned thumbnails",
+        "stats": stats
+    }
+
+
+@router.post("/admin/reset-app-data")
+def reset_app_data():
+    """Reset ALL app data - nuclear option"""
+    from backend.utils.cleanup import reset_all_app_data
+    result = reset_all_app_data()
+    return {
+        "status": "ok",
+        "message": "All app data reset successfully",
+        "result": result
+    }
 
 
 @router.get("/latest-job", response_model=LatestJobResponse)

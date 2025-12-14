@@ -72,6 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const optCancelFinalize = document.getElementById('optCancelFinalize');
     const optApplyDecision = document.getElementById('optApplyDecision');
 
+    // Reset Modals Elements
+    const btnResetAppData = document.getElementById('btnResetAppData');
+    const resetConfirmModal1 = document.getElementById('resetConfirmModal1');
+    const resetConfirmModal2 = document.getElementById('resetConfirmModal2');
+    const btnCancelReset1 = document.getElementById('btnCancelReset1');
+    const btnCancelReset2 = document.getElementById('btnCancelReset2');
+    const btnNextReset = document.getElementById('btnNextReset');
+    const btnConfirmReset = document.getElementById('btnConfirmReset');
+
     // Image Preview Modal Elements
     const imagePreviewModal = document.getElementById('imagePreviewModal');
     const imagePreviewSrc = document.getElementById('imagePreviewSrc');
@@ -1202,6 +1211,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Reset Modal Functions
+    function showResetModal1() {
+        resetConfirmModal1.style.display = 'flex';
+    }
+
+    function showResetModal2() {
+        resetConfirmModal1.style.display = 'none';
+        resetConfirmModal2.style.display = 'flex';
+    }
+
+    function hideResetModals() {
+        resetConfirmModal1.style.display = 'none';
+        resetConfirmModal2.style.display = 'none';
+    }
+
+    async function performReset() {
+        try {
+            const response = await fetch('/api/admin/reset-app-data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Reset failed');
+            }
+
+            alert('All app data deleted successfully! Page will reload.');
+            window.location.reload();
+        } catch (err) {
+            alert(`Reset failed: ${err.message}`);
+            hideResetModals();
+        }
+    }
+
     function finalizePrompt() {
         const unreviewedCount = currentGroups.length - visitedGroups.size;
         const reviewedCount = visitedGroups.size;
@@ -1399,6 +1443,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     optApplyDecision.addEventListener('click', applyFinalizeActions);
+
+    // Reset modal buttons - double confirmation flow
+    btnResetAppData.addEventListener('click', showResetModal1);
+    btnNextReset.addEventListener('click', showResetModal2);
+    btnCancelReset1.addEventListener('click', hideResetModals);
+    btnCancelReset2.addEventListener('click', hideResetModals);
+    btnConfirmReset.addEventListener('click', async () => {
+        hideResetModals();
+        await performReset();
+    });
 
     // Keyboard shortcuts for finalize modal
     window.addEventListener('keydown', (e) => {

@@ -136,6 +136,14 @@
                         <button id="btnStopScan" class="ml-4 gradient-button-destructive text-white font-medium py-2 px-6 rounded-md" style="display: none;">Stop Scan</button>
                         <button id="btnGoReview" class="ml-4 gradient-button-secondary text-white font-medium py-2 px-6 rounded-md" disabled>Go to Review</button>
                     </div>
+                    <div>
+                        <button id="btnResetAppData" class="gradient-button-destructive text-white font-medium py-2 px-4 rounded-md">
+                            Reset All Data
+                        </button>
+                    </div>
+                </div>
+                <!-- Scan Status Text -->
+                <div class="mt-4 text-center">
                     <div id="scanStatus" class="text-sm text-gray-500"></div>
                 </div>
                 <div id="validationErrorAlert" class="hidden mt-4 p-4 bg-black border-l-4 border-[#ef4444] text-white rounded-md shadow-lg">
@@ -290,7 +298,7 @@
                     <!-- Progress Info -->
                     <p id="finalizeMessage" class="text-gray-300 mb-4"></p>
                     <p id="unreviewedWarning" class="text-yellow-400 mb-6" style="display: none;">
-                        ⚠️ You have unreviewed groups. Choose how to handle them:
+                        You have unreviewed groups. Choose how to handle them:
                     </p>
 
                     <!-- Trash Settings Section -->
@@ -437,6 +445,66 @@
 
     </div>
 
+    <!-- Reset Confirmation Modal 1 -->
+    <div id="resetConfirmModal1" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+         style="display: none;">
+        <div class="gradient-card border border-gray-700 p-8 rounded-lg shadow-2xl w-full max-w-lg">
+            <h3 class="text-2xl font-medium text-white mb-4">Reset All App Data?</h3>
+
+            <p class="text-gray-300 mb-6">
+                This will permanently delete:
+            </p>
+
+            <ul class="list-disc list-inside text-gray-400 mb-6 space-y-2">
+                <li>All cached thumbnails</li>
+                <li>Image hash cache</li>
+                <li>Scan history and groups</li>
+            </ul>
+
+            <p class="text-yellow-400 mb-6">
+                Your original images will NOT be deleted.
+            </p>
+
+            <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                <button id="btnCancelReset1"
+                        class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">
+                    Cancel
+                </button>
+                <button id="btnNextReset"
+                        class="gradient-button-destructive text-white font-medium py-3 px-6 rounded-md">
+                    Continue →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Confirmation Modal 2 (Final) -->
+    <div id="resetConfirmModal2" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+         style="display: none;">
+        <div class="gradient-card border border-red-900 border-2 p-8 rounded-lg shadow-2xl w-full max-w-lg">
+            <h3 class="text-2xl font-medium text-red-400 mb-4">FINAL CONFIRMATION</h3>
+
+            <p class="text-white text-lg mb-6">
+                Are you absolutely sure?
+            </p>
+
+            <p class="text-gray-300 mb-6">
+                This action <strong class="text-red-400">CANNOT BE UNDONE</strong>.
+            </p>
+
+            <div class="flex justify-between items-center pt-4 border-t border-red-900">
+                <button id="btnCancelReset2"
+                        class="gradient-button-secondary text-white font-medium py-2 px-4 rounded-md">
+                    Cancel
+                </button>
+                <button id="btnConfirmReset"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-md">
+                    YES, DELETE EVERYTHING
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Original Image Viewer Modal (for Magnify Mode) -->
     <div id="originalImageViewerModal" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50" style="display: none;">
                 <img id="originalImageSrc" src="" alt="Magnified Image" class="max-w-full max-h-full object-contain">
@@ -444,6 +512,6 @@
 
     </div>
 
-    <script src="/static/script.js?v=9"></script>
+    <script src="/static/script.js?v=11"></script>
 </body>
 </html>
