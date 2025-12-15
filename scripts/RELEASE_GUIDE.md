@@ -56,7 +56,7 @@ git tag -a v1.0.1 -m "Release version 1.0.1"
 git push origin v1.0.1
 
 # 5. Create GitHub release
-# Go to: https://github.com/sanhak994/find_similar_images/releases/new
+# Go to: https://github.com/994/find_similar_images/releases/new
 # Upload: DMG, ZIP, checksums.txt from releases/v1.0.1/
 ```
 
@@ -214,7 +214,7 @@ git push origin v1.0.1
 ### Step 6: Create GitHub Release
 
 1. **Navigate to releases page:**
-   - Go to: https://github.com/sanhak994/find_similar_images/releases
+   - Go to: https://github.com/moonmayne/find_similar_images/releases
    - Click "Draft a new release"
 
 2. **Fill in release form:**
@@ -252,7 +252,7 @@ git push origin v1.0.1
 After publishing, verify everything is correct:
 
 1. **Visit release page:**
-   - https://github.com/sanhak994/find_similar_images/releases/latest
+   - https://github.com/moonmayne/find_similar_images/releases/latest
 
 2. **Check downloads:**
    - Click each file link to ensure they download correctly
@@ -261,8 +261,8 @@ After publishing, verify everything is correct:
 3. **Verify checksums:**
    ```bash
    # Download files from GitHub
-   curl -LO https://github.com/sanhak994/find_similar_images/releases/download/v1.0.1/FindSimilarImages-1.0.1.dmg
-   curl -LO https://github.com/sanhak994/find_similar_images/releases/download/v1.0.1/checksums.txt
+   curl -LO https://github.com/moonmayne/find_similar_images/releases/download/v1.0.1/FindSimilarImages-1.0.1.dmg
+   curl -LO https://github.com/moonmayne/find_similar_images/releases/download/v1.0.1/checksums.txt
 
    # Verify checksum matches
    shasum -a 256 -c checksums.txt
@@ -594,15 +594,15 @@ shasum -a 256 -c checksums.txt
 
 ### GitHub URLs
 
-- Releases: `https://github.com/sanhak994/find_similar_images/releases`
-- New release: `https://github.com/sanhak994/find_similar_images/releases/new`
-- Latest release: `https://github.com/sanhak994/find_similar_images/releases/latest`
+- Releases: `https://github.com/moonmayne/find_similar_images/releases`
+- New release: `https://github.com/moonmayne/find_similar_images/releases/new`
+- Latest release: `https://github.com/moonmayne/find_similar_images/releases/latest`
 
 ---
 
 ## Getting Help
 
-- **Project issues:** https://github.com/sanhak994/find_similar_images/issues
+- **Project issues:** https://github.com/moonmayne/find_similar_images/issues
 - **GitHub Docs:** https://docs.github.com/en/repositories/releasing-projects-on-github
 - **Semantic Versioning:** https://semver.org/
 
