@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import logging
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -9,7 +10,17 @@ from fastapi.templating import Jinja2Templates
 
 from backend.api.routes import router
 
-templates = Jinja2Templates(directory="backend/templates")
+# Get base directory (works for both dev and PyInstaller bundle)
+def get_base_dir() -> Path:
+    if getattr(sys, 'frozen', False):
+        # Running as PyInstaller bundle
+        return Path(sys._MEIPASS)
+    else:
+        # Running in development
+        return Path(__file__).parent.parent
+
+BASE_DIR = get_base_dir()
+templates = Jinja2Templates(directory=str(BASE_DIR / "backend" / "templates"))
 
 
 def create_app() -> FastAPI:
@@ -22,7 +33,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(router, prefix="/api")
-    app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+    static_dir = str(BASE_DIR / "backend" / "static")
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     @app.get("/")
     async def root(request: Request):
