@@ -193,9 +193,9 @@ $(cat "$RELEASE_DIR/checksums.txt")
 
 ---
 
-Full documentation: https://github.com/sanhak994/find_similar_images
+Full documentation: https://github.com/moonmayne/find_similar_images
 
-Report issues: https://github.com/sanhak994/find_similar_images/issues
+Report issues: https://github.com/moonmayne/find_similar_images/issues
 EOF
 print_success "Release notes template created"
 
@@ -225,7 +225,7 @@ echo "   git tag -a v${VERSION} -m \"Release version ${VERSION}\""
 echo "   git push origin v${VERSION}"
 echo ""
 echo "4️⃣  Create GitHub release:"
-echo "   • Go to: https://github.com/sanhak994/find_similar_images/releases/new"
+echo "   • Go to: https://github.com/moonmayne/find_similar_images/releases/new"
 echo "   • Select tag: v${VERSION}"
 echo "   • Upload: $DMG_FILE, $ZIP_FILE, checksums.txt"
 echo "   • Copy content from: $RELEASE_DIR/RELEASE_NOTES.md"
