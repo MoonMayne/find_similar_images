@@ -11,7 +11,7 @@
 
 ```bash
 # Clone, setup, install, and run (all in one)
-git clone https://github.com/sanhak994/find_similar_images.git && \
+git clone https://github.com/moonmayne/find_similar_images.git && \
 cd find_similar_images && \
 python3 -m venv venv && \
 source venv/bin/activate && \
