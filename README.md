@@ -228,6 +228,74 @@ GET    /api/thumbnail              - Get cached thumbnail
 
 ---
 
+## Building macOS App
+
+You can package the application as a native macOS .app bundle for distribution.
+
+### Prerequisites
+
+1. **Python 3.14** with tkinter support:
+   ```bash
+   brew install python@3.14 python-tk@3.14
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r backend/requirements.txt
+   ```
+
+### Build Process
+
+1. **Build the .app bundle:**
+   ```bash
+   ./build.sh
+   ```
+
+   This creates `dist/FindSimilarImages.app` with:
+   - GUI control panel with dock icon
+   - "Open in Browser" and "Quit" buttons
+   - Auto-opens web interface on launch
+   - All dependencies bundled
+
+2. **Test the app:**
+   ```bash
+   open dist/FindSimilarImages.app
+   ```
+
+3. **Create DMG installer (optional):**
+   ```bash
+   ./create_dmg.sh
+   ```
+
+   This creates `FindSimilarImages-1.0.0.dmg` for distribution.
+
+### How the App Works
+
+- **Data Location:** `~/Library/Application Support/FindSimilarImages/`
+- **Logs:** `~/FindSimilarImages_error.log`
+- **Server:** Runs on `http://localhost:8000`
+- **Control Panel:** Provides dock icon, status display, and quit functionality
+
+### User Experience
+
+1. Double-click `FindSimilarImages.app`
+2. Control panel window appears in dock
+3. Browser auto-opens to localhost:8000
+4. Close browser anytime, reopen via "Open in Browser" button
+5. Click "Quit" to stop server and exit
+
+### Build Files
+
+- `launcher.py` - Entry point with tkinter GUI
+- `FindSimilarImages.spec` - PyInstaller configuration
+- `build.sh` - Build automation script
+- `create_dmg.sh` - DMG creation script
+- `AppIcon.icns` - Application icon
+
+---
+
 ## Dependencies
 
 ```
